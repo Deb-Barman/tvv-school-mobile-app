@@ -1,0 +1,36 @@
+name: tvv_mobile
+description: Tufanganj Vivekananda Vidyalaya (H.S.) - official school app for students, teachers and the Super Admin.
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Tokens are kept in the Android Keystore / iOS Keychain, never in plain preferences.
+  flutter_secure_storage: ^9.2.2
+  # Only the theme choice and the "last role" hint are stored here (no secrets).
+  shared_preferences: ^2.3.2
+  # Opens marksheets, downloads and social links in the browser / Drive app.
+  url_launcher: ^6.3.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  flutter_launcher_icons: ^0.14.1
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/school_logo.png
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/app_icon.png"
+  remove_alpha_ios: true
+  adaptive_icon_background: "#E4E7F0"
+  adaptive_icon_foreground: "assets/images/app_icon_foreground.png"

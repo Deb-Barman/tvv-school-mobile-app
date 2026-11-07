@@ -1,0 +1,14 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Keep the build green on style-only findings; real errors still fail.
+    deprecated_member_use: ignore
+    deprecated_member_use_from_same_package: ignore
+
+linter:
+  rules:
+    prefer_const_constructors: false
+    prefer_const_literals_to_create_immutables: false
+    use_key_in_widget_constructors: false
+    avoid_print: true
