@@ -1,1 +1,35 @@
+name: Mobile app - check the live API
 
+# Runs the app's own data layer (tool/verify_backend.dart) against the real backend and reports pass/fail for every
+# endpoint, role permission and the JWT refresh behaviour. READ-ONLY: it never creates or deletes anything.
+#   Run it from the Actions tab after you deploy backend changes.
+
+on:
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.41.9"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - name: Check backend endpoints (read-only)
+        env:
+          API_BASE_URL: ${{ vars.TVV_API_BASE_URL || 'https://tufanganj-vivekanand-vidyalaya.onrender.com/api' }}
+          STUDENT_USER: ${{ secrets.CHECK_STUDENT_USER }}
+          STUDENT_PASS: ${{ secrets.CHECK_STUDENT_PASS }}
+          TEACHER_USER: ${{ secrets.CHECK_TEACHER_USER }}
+          TEACHER_PASS: ${{ secrets.CHECK_TEACHER_PASS }}
+          ADMIN_USER: ${{ secrets.CHECK_ADMIN_USER }}
+          ADMIN_PASS: ${{ secrets.CHECK_ADMIN_PASS }}
+        run: dart tool/verify_backend.dart
