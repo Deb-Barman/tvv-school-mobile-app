@@ -4,7 +4,7 @@ The official app of **Tufanganj Vivekananda Vidyalaya (H.S.)** for Android and i
 It talks to the school's **existing** Django REST API (the same one the website uses). Nothing in the backend, the
 Supabase database or the website is replaced or duplicated.
 
-* Setup, cloud builds, Play Store and TestFlight: [`../docs/MOBILE_SETUP.md`](../docs/MOBILE_SETUP.md)
+* Setup, cloud builds, building and installing the APK: [`../docs/MOBILE_SETUP.md`](../docs/MOBILE_SETUP.md)
 * API map, what was verified, known gaps: [`../docs/MOBILE_API_NOTES.md`](../docs/MOBILE_API_NOTES.md)
 
 ## What each role gets
@@ -50,7 +50,9 @@ test/                     unit + widget tests (run in CI)
   rotate on this backend, so each new one is stored; one refresh is shared by simultaneous requests; going offline
   or a sleeping server never signs anybody out; reads retry while the free Render server wakes up.
 * **Loading states:** a skeleton until all of a screen's data has arrived, a clear error with *Try again*, pull-to-refresh.
-* **Design:** the website's soft lilac "neumorphic" identity, light and dark.
+* **Design:** clean Instagram-style look (white / true-black, hairline borders, colourful story rings, icon-only bottom bar) in the school's violet, light and dark.
+* **Offline:** the last good answer of every read is saved on the phone and shown (with a banner) when there is no signal; it is wiped on sign-in and sign-out.
+* **Time:** every "today" in the app uses Indian time (IST), not the phone's clock.
 
 ## Run it on a computer (optional)
 

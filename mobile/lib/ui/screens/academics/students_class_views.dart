@@ -8,6 +8,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
+import '../../../core/clock.dart';
 
 // ================================================================= students (staff)
 
@@ -417,7 +418,7 @@ class _SessionFormState extends State<_SessionForm> {
           placeholder: 'Not set',
           icon: Icons.calendar_month_rounded,
           onTap: () async {
-            final d = await pickDate(context, initial: _start ?? DateTime.now());
+            final d = await pickDate(context, initial: _start ?? schoolNow());
             if (d != null) setState(() => _start = d);
           },
         ),

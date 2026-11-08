@@ -27,9 +27,9 @@ void main() {
     expect(find.text('Username is required'), findsOneWidget);
     expect(find.text('Password is required'), findsOneWidget);
 
-    // The Super Admin portal asks for an e-mail instead of a username.
-    await tester.ensureVisible(find.text('Super Admin sign in'));
-    await tester.tap(find.text('Super Admin sign in'));
+    // The Super Admin sign-in is hidden: long-press the school seal. It asks for an e-mail instead of a username.
+    expect(find.text('Super Admin sign in'), findsNothing);
+    await tester.longPress(find.byKey(const Key('login-logo')));
     await tester.pumpAndSettle();
     expect(find.text('Admin e-mail'), findsOneWidget);
   });

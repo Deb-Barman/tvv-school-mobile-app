@@ -1,16 +1,65 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/clock.dart';
+import '../../../state/app_scope.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/common.dart';
 import '../../widgets/neu.dart';
 
 String greeting() {
-  final h = DateTime.now().hour;
+  final h = schoolNow().hour;
   if (h < 12) return 'Good morning';
   if (h < 17) return 'Good afternoon';
   return 'Good evening';
 }
 
-/// Small raised tile with a big number.
+/// Profile-style header at the top of every dashboard: picture with a ring, greeting, name and a few chips.
+class GreetingHeader extends StatelessWidget {
+  const GreetingHeader({super.key, required this.name, this.overline, this.chips = const []});
+  final String name;
+  final String? overline;
+  final List<Widget> chips;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+      child: Row(children: [
+        Avatar(name: context.me.fullName, size: 68, ring: true),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(overline ?? greeting(), maxLines: 1, overflow: TextOverflow.ellipsis, style: c.small),
+            Text(name, maxLines: 2, overflow: TextOverflow.ellipsis, style: c.display),
+            if (chips.isNotEmpty) ...[const SizedBox(height: 6), Wrap(spacing: 6, runSpacing: 6, children: chips)],
+          ]),
+        ),
+      ]),
+    );
+  }
+}
+
+/// A round coloured icon (used as the picture of a feed post).
+class IconBadge extends StatelessWidget {
+  const IconBadge(this.icon, {super.key, this.tone = 'accent', this.size = 38});
+  final IconData icon;
+  final String tone;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final col = AppColors.of(context).tone(tone);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: col.withValues(alpha: 0.14), shape: BoxShape.circle),
+      child: Icon(icon, size: size * 0.52, color: col),
+    );
+  }
+}
+
+/// Small flat tile with a big number.
 class StatTile extends StatelessWidget {
   const StatTile({super.key, required this.icon, required this.label, required this.value, this.tone = 'accent', this.onTap});
   final IconData icon;
@@ -22,17 +71,12 @@ class StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-    final col = c.tone(tone);
     return NeuCard(
       onTap: onTap,
       padding: const EdgeInsets.all(14),
-      radius: 20,
+      radius: 16,
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(color: col.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(11)),
-            child: Icon(icon, size: 19, color: col)),
+        IconBadge(icon, tone: tone, size: 34),
         const SizedBox(height: 10),
         Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: c.text)),
         Text(label, style: c.small, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -63,7 +107,7 @@ class TileGrid extends StatelessWidget {
   }
 }
 
-/// Quick action chip-button used on dashboards.
+/// Quick action button (kept for screens that still use it).
 class QuickAction extends StatelessWidget {
   const QuickAction({super.key, required this.icon, required this.label, required this.onTap});
   final IconData icon;
@@ -76,7 +120,7 @@ class QuickAction extends StatelessWidget {
     return NeuCard(
       onTap: onTap,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-      radius: 18,
+      radius: 14,
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, color: c.accent, size: 24),
         const SizedBox(height: 8),

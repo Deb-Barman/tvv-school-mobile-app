@@ -8,6 +8,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
+import '../../../core/clock.dart';
 
 class _ExamData {
   _ExamData(this.exams, this.classes, this.subjects);
@@ -35,7 +36,7 @@ class ExamsView extends StatelessWidget {
       },
       builder: (ctx, data, reload) {
         final c = AppColors.of(ctx);
-        final today = dayOnly(DateTime.now());
+        final today = dayOnly(schoolNow());
         final subjects = {for (final s in data.subjects) s.id: s.name};
         final classes = {for (final k in data.classes) k.id: k.label};
         final upcoming = data.exams.where((e) => e.date != null && !e.date!.isBefore(today)).toList()
@@ -143,7 +144,7 @@ class _ExamFormState extends State<ExamForm> {
   late final _room = TextEditingController(text: widget.existing?.room);
   late String? _classId = widget.existing?.classId;
   late String? _subjectId = widget.existing?.subjectId;
-  late DateTime _date = widget.existing?.date ?? DateTime.now().add(const Duration(days: 7));
+  late DateTime _date = widget.existing?.date ?? schoolNow().add(const Duration(days: 7));
   String? _time;
   bool _busy = false;
   String? _error;

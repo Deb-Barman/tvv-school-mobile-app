@@ -20,11 +20,14 @@ import 'screens/settings/settings_view.dart';
 /// One section of the app. Which sections a person gets is decided here from their role; the Django API is what
 /// actually enforces permissions (a student who somehow reached an admin screen would only see "permission" errors).
 class Feature {
-  const Feature({required this.key, required this.title, required this.icon, required this.builder, this.subtitle = ''});
+  const Feature({required this.key, required this.title, required this.icon, required this.builder, this.subtitle = '', this.activeIcon});
   final String key;
   final String title;
   final String subtitle;
   final IconData icon;
+
+  /// Filled version shown in the bottom bar while the tab is selected.
+  final IconData? activeIcon;
   final Widget Function(BuildContext context) builder;
 }
 
@@ -92,10 +95,17 @@ Feature _timetable(String subtitle) => Feature(
     key: 'timetable',
     title: 'Timetable',
     subtitle: subtitle,
-    icon: Icons.calendar_view_week_rounded,
+    icon: Icons.calendar_view_week_outlined,
+    activeIcon: Icons.calendar_view_week_rounded,
     builder: (_) => const TimetableView());
 Feature _homework(String subtitle) =>
-    Feature(key: 'homework', title: 'Homework', subtitle: subtitle, icon: Icons.assignment_outlined, builder: (_) => const HomeworkView());
+    Feature(
+        key: 'homework',
+        title: 'Homework',
+        subtitle: subtitle,
+        icon: Icons.assignment_outlined,
+        activeIcon: Icons.assignment_rounded,
+        builder: (_) => const HomeworkView());
 Feature _marksheets() => Feature(
     key: 'marksheets',
     title: 'Marksheets',
@@ -108,10 +118,10 @@ AppNav navFor(AppUser user, OpenFeature open) {
     case Role.student:
       return AppNav(
         tabs: [
-          Feature(key: 'home', title: 'Home', icon: Icons.home_rounded, builder: (_) => StudentHomeView(onOpen: open)),
+          Feature(key: 'home', title: 'Home', icon: Icons.home_outlined, activeIcon: Icons.home_rounded, builder: (_) => StudentHomeView(onOpen: open)),
           _timetable('Your weekly classes'),
           _homework('Tick it off when done'),
-          Feature(key: 'attendance', title: 'Attendance', icon: Icons.fact_check_outlined, builder: (_) => const AttendanceHistoryView()),
+          Feature(key: 'attendance', title: 'Attendance', icon: Icons.fact_check_outlined, activeIcon: Icons.fact_check_rounded, builder: (_) => const AttendanceHistoryView()),
         ],
         more: [
           Feature(
@@ -137,9 +147,9 @@ AppNav navFor(AppUser user, OpenFeature open) {
     case Role.teacher:
       return AppNav(
         tabs: [
-          Feature(key: 'home', title: 'Home', icon: Icons.home_rounded, builder: (_) => TeacherHomeView(onOpen: open)),
+          Feature(key: 'home', title: 'Home', icon: Icons.home_outlined, activeIcon: Icons.home_rounded, builder: (_) => TeacherHomeView(onOpen: open)),
           _timetable('Your periods or any class'),
-          Feature(key: 'take_attendance', title: 'Attendance', icon: Icons.fact_check_outlined, builder: (_) => const TakeAttendanceView()),
+          Feature(key: 'take_attendance', title: 'Attendance', icon: Icons.fact_check_outlined, activeIcon: Icons.fact_check_rounded, builder: (_) => const TakeAttendanceView()),
           _homework('Set and review'),
         ],
         more: [
@@ -178,11 +188,11 @@ AppNav navFor(AppUser user, OpenFeature open) {
     case Role.superAdmin:
       return AppNav(
         tabs: [
-          Feature(key: 'home', title: 'Dashboard', icon: Icons.dashboard_rounded, builder: (_) => AdminHomeView(onOpen: open)),
-          Feature(key: 'accounts', title: 'Accounts', icon: Icons.manage_accounts_outlined, builder: (_) => const AccountsView()),
+          Feature(key: 'home', title: 'Dashboard', icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard_rounded, builder: (_) => AdminHomeView(onOpen: open)),
+          Feature(key: 'accounts', title: 'Accounts', icon: Icons.manage_accounts_outlined, activeIcon: Icons.manage_accounts_rounded, builder: (_) => const AccountsView()),
           Feature(
-              key: 'attendance_report', title: 'Attendance', icon: Icons.fact_check_outlined, builder: (_) => const AttendanceReportView()),
-          Feature(key: 'inbox', title: 'Inbox', icon: Icons.inbox_outlined, builder: (_) => const InboxView()),
+              key: 'attendance_report', title: 'Attendance', icon: Icons.fact_check_outlined, activeIcon: Icons.fact_check_rounded, builder: (_) => const AttendanceReportView()),
+          Feature(key: 'inbox', title: 'Inbox', icon: Icons.inbox_outlined, activeIcon: Icons.inbox_rounded, builder: (_) => const InboxView()),
         ],
         more: [
           _notices(),

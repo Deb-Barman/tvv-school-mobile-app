@@ -5,6 +5,7 @@ import '../../../data/models/admin.dart';
 import '../../../state/app_scope.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
+import '../../widgets/insta.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
 import 'dashboard_parts.dart';
@@ -23,25 +24,23 @@ class AdminHomeView extends StatelessWidget {
       builder: (ctx, s, reload) {
         final c = AppColors.of(ctx);
         final maxDay = s.last7.fold<int>(1, (m, d) => (d.present + d.absent) > m ? d.present + d.absent : m);
-        return PageList(children: [
-          NeuCard(
-            depth: 3,
-            radius: 26,
-            padding: const EdgeInsets.all(20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('${greeting()} \u00b7 SUPER ADMIN'.toUpperCase(), style: c.eyebrow),
-              const SizedBox(height: 4),
-              Text(me.fullName, style: c.display),
-              const SizedBox(height: 10),
-              Wrap(spacing: 8, runSpacing: 6, children: [
-                Pill(s.currentSession == null ? 'No current session' : 'Session ${s.currentSession}',
-                    tone: s.currentSession == null ? 'warn' : 'good'),
-                if (s.passwordRequests > 0)
-                  Pill('${s.passwordRequests} password request${s.passwordRequests == 1 ? '' : 's'}', tone: 'bad', icon: Icons.key_rounded),
-              ]),
-            ]),
-          ),
-          const SizedBox(height: 14),
+        return PageList(padding: const EdgeInsets.fromLTRB(12, 0, 12, 40), children: [
+          StoryRow(bubbles: [
+            StoryBubble(icon: Icons.person_add_alt_1_rounded, label: 'Accounts', badge: s.passwordRequests, onTap: () => onOpen('accounts')),
+            StoryBubble(icon: Icons.campaign_outlined, label: 'Notices', onTap: () => onOpen('notices')),
+            StoryBubble(icon: Icons.how_to_reg_outlined, label: 'Attendance', onTap: () => onOpen('take_attendance')),
+            StoryBubble(icon: Icons.badge_outlined, label: 'Teachers', onTap: () => onOpen('teacher_attendance')),
+            StoryBubble(icon: Icons.inbox_outlined, label: 'Inbox', badge: s.admissionsPending + s.newMessages, onTap: () => onOpen('inbox')),
+            StoryBubble(icon: Icons.class_outlined, label: 'Classes', onTap: () => onOpen('class_info')),
+            StoryBubble(icon: Icons.calendar_view_week_outlined, label: 'Timetable', onTap: () => onOpen('timetable')),
+            StoryBubble(icon: Icons.event_outlined, label: 'Events', onTap: () => onOpen('events')),
+          ]),
+          GreetingHeader(name: me.fullName, overline: '${greeting()} \u00b7 Super Admin', chips: [
+            Pill(s.currentSession == null ? 'No current session' : 'Session ${s.currentSession}', tone: s.currentSession == null ? 'warn' : 'good'),
+            if (s.passwordRequests > 0)
+              Pill('${s.passwordRequests} password request${s.passwordRequests == 1 ? '' : 's'}', tone: 'bad', icon: Icons.key_rounded),
+          ]),
+          const SizedBox(height: 10),
           TileGrid(tiles: [
             StatTile(icon: Icons.school_outlined, label: 'Students', value: '${s.students}', onTap: () => onOpen('accounts')),
             StatTile(icon: Icons.badge_outlined, label: 'Teachers', value: '${s.teachers}', tone: 'warn', onTap: () => onOpen('accounts')),
@@ -82,7 +81,7 @@ class AdminHomeView extends StatelessWidget {
                 Expanded(child: _Mini(label: 'Marked', value: '${s.markedToday}', tone: 'accent')),
               ]),
               const SizedBox(height: 16),
-              Text('LAST 7 DAYS', style: c.eyebrow),
+              Text('Last 7 days', style: c.bodyStrong),
               const SizedBox(height: 10),
               SizedBox(
                 height: 90,
@@ -111,12 +110,6 @@ class AdminHomeView extends StatelessWidget {
               ),
             ]),
           ),
-          const SectionTitle('Quick actions'),
-          QuickActionRow(actions: [
-            QuickAction(icon: Icons.person_add_alt_1_rounded, label: 'New account', onTap: () => onOpen('accounts')),
-            QuickAction(icon: Icons.campaign_outlined, label: 'Post notice', onTap: () => onOpen('notices')),
-            QuickAction(icon: Icons.fact_check_outlined, label: 'Attendance', onTap: () => onOpen('take_attendance')),
-          ]),
           const SectionTitle('School at a glance'),
           TileGrid(tiles: [
             StatTile(icon: Icons.class_outlined, label: 'Classes', value: '${s.classes}', onTap: () => onOpen('class_info')),
@@ -138,7 +131,7 @@ class AdminHomeView extends StatelessWidget {
                 padding: const EdgeInsets.only(bottom: 10),
                 child: NeuCard(
                   padding: const EdgeInsets.all(14),
-                  radius: 18,
+                  radius: 14,
                   onTap: () => onOpen('inbox'),
                   child: Row(children: [
                     Expanded(

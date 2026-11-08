@@ -9,6 +9,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
+import '../../../core/clock.dart';
 
 class _Base {
   _Base({this.years = const [], this.classes = const [], this.teachers = const []});
@@ -50,7 +51,7 @@ class _TimetableBody extends StatefulWidget {
 }
 
 class _TimetableBodyState extends State<_TimetableBody> {
-  late int _day = DateTime.now().weekday <= 6 ? DateTime.now().weekday - 1 : 0;
+  late int _day = schoolNow().weekday <= 6 ? schoolNow().weekday - 1 : 0;
   String? _classId; // staff: chosen class (null + teacher => "my periods")
   String? _yearId; // student: chosen class year (null => current)
   late bool _mine = widget.user.isTeacher;
@@ -101,17 +102,19 @@ class _TimetableBodyState extends State<_TimetableBody> {
             ),
           if (!_u.isStudent) ...[
             if (_u.isTeacher)
-              // A horizontally scrolling bar needs a fixed width when it sits in a Row.
-              Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: SizedBox(
-                    width: 218,
+              // A horizontally scrolling bar needs a bounded width when it sits in a Row: share the line, never overflow.
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 218),
                     child: ChipBar<bool>(
                         items: const [true, false],
                         selected: _mine,
                         labelOf: (v) => v ? 'My periods' : 'By class',
                         onChanged: (v) => setState(() => _mine = v),
                         padding: EdgeInsets.zero)),
+                ),
               ),
             if (!_mine)
               Expanded(

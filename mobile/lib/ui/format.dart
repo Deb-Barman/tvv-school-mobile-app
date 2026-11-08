@@ -1,3 +1,5 @@
+import '../core/clock.dart';
+
 const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const _monthsLong = [
   'January',
@@ -46,7 +48,7 @@ bool sameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month &
 /// "Today", "Tomorrow", "In 3 days", "2 days ago"
 String relativeDay(DateTime? d) {
   if (d == null) return '';
-  final diff = dayOnly(d).difference(dayOnly(DateTime.now())).inDays;
+  final diff = dayOnly(d).difference(dayOnly(schoolNow())).inDays;
   if (diff == 0) return 'Today';
   if (diff == 1) return 'Tomorrow';
   if (diff == -1) return 'Yesterday';

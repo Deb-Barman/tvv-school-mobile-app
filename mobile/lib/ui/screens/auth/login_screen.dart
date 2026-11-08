@@ -6,6 +6,7 @@ import '../../../data/repositories/auth_repository.dart';
 import '../../../state/app_scope.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
+import '../../widgets/insta.dart';
 import '../../widgets/neu.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -62,6 +63,17 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  void _togglePortal() {
+    if (_busy) return;
+    setState(() {
+      _portal = _portal == LoginPortal.superAdmin ? LoginPortal.schoolMember : LoginPortal.superAdmin;
+      _error = null;
+      _user.clear();
+      _pass.clear();
+    });
+    toast(context, _portal == LoginPortal.superAdmin ? 'Super Admin sign in' : 'Student / Teacher sign in');
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
@@ -72,97 +84,85 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 460),
-              child: Column(children: [
-                Container(
-                  width: 112,
-                  height: 112,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: c.surface, shape: BoxShape.circle, boxShadow: c.raised(3)),
-                  child: Image.asset('assets/images/school_logo.png'),
-                ),
-                const SizedBox(height: 22),
-                Text(AppConfig.schoolName, textAlign: TextAlign.center, style: c.display),
-                const SizedBox(height: 4),
-                Text('H.S. \u00b7 ${AppConfig.motto}', textAlign: TextAlign.center, style: c.eyebrow),
-                const SizedBox(height: 28),
-                NeuCard(
-                  depth: 3,
-                  padding: const EdgeInsets.all(22),
-                  radius: 28,
-                  child: AutofillGroup(
-                    child: Form(
-                      key: _key,
-                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text(admin ? 'Super Admin sign in' : 'Sign in', style: c.h1),
-                        const SizedBox(height: 4),
-                        Text(
-                            admin
-                                ? 'Use the administrator e-mail and password.'
-                                : 'Students and teachers: use the username and password given by the school.',
-                            style: c.small),
-                        if (notice != null) ...[
-                          const SizedBox(height: 14),
-                          _Banner(text: notice, tone: 'warn', icon: Icons.info_outline_rounded),
-                        ],
-                        const SizedBox(height: 18),
-                        AppField(
-                          controller: _user,
-                          label: admin ? 'Admin e-mail' : 'Username',
-                          icon: admin ? Icons.mail_outline_rounded : Icons.person_outline_rounded,
-                          keyboard: admin ? TextInputType.emailAddress : TextInputType.text,
-                          action: TextInputAction.next,
-                          autofillHints: const [AutofillHints.username],
-                          validator: (v) => requiredField(v, admin ? 'E-mail' : 'Username'),
-                        ),
-                        const SizedBox(height: 14),
-                        AppField(
-                          controller: _pass,
-                          label: 'Password',
-                          icon: Icons.lock_outline_rounded,
-                          obscure: !_show,
-                          action: TextInputAction.done,
-                          onSubmitted: (_) => _busy ? null : _submit(),
-                          autofillHints: const [AutofillHints.password],
-                          validator: (v) => requiredField(v, 'Password'),
-                          suffix: IconButton(
-                              tooltip: _show ? 'Hide password' : 'Show password',
-                              icon: Icon(_show ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: c.muted),
-                              onPressed: () => setState(() => _show = !_show)),
-                        ),
-                        if (_error != null) ...[
-                          const SizedBox(height: 14),
-                          _Banner(text: _error!, tone: 'bad', icon: Icons.error_outline_rounded),
-                        ],
-                        const SizedBox(height: 20),
-                        NeuButton(label: 'Sign in', icon: Icons.login_rounded, busy: _busy, onPressed: _submit),
-                        if (!admin)
-                          Align(
-                            alignment: Alignment.center,
-                            child: TextButton(
-                                onPressed:
-                                    _busy ? null : () => showSheet<void>(context, (_) => _ForgotForm(initialUsername: _user.text.trim())),
-                                child: const Text('Forgot password?')),
-                          ),
-                      ]),
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: AutofillGroup(
+                child: Form(
+                  key: _key,
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    // Long-press the school seal to switch to the Super Admin sign-in (kept out of sight on purpose).
+                    Center(
+                      child: GestureDetector(
+                        key: const Key('login-logo'),
+                        onLongPress: _togglePortal,
+                        child: const SchoolLogo(size: 108),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 20),
+                    Text(AppConfig.schoolName, textAlign: TextAlign.center, style: c.display),
+                    const SizedBox(height: 4),
+                    Text('H.S. \u00b7 ${AppConfig.motto}', textAlign: TextAlign.center, style: c.small),
+                    const SizedBox(height: 30),
+                    Text(admin ? 'Super Admin sign in' : 'Sign in', textAlign: TextAlign.center, style: c.h1),
+                    const SizedBox(height: 4),
+                    Text(
+                        admin ? 'Use the administrator e-mail and password.' : 'Use the username and password given by the school.',
+                        textAlign: TextAlign.center,
+                        style: c.small),
+                    if (notice != null) ...[
+                      const SizedBox(height: 14),
+                      _Banner(text: notice, tone: 'warn', icon: Icons.info_outline_rounded),
+                    ],
+                    const SizedBox(height: 20),
+                    AppField(
+                      controller: _user,
+                      label: admin ? 'Admin e-mail' : 'Username',
+                      icon: admin ? Icons.mail_outline_rounded : Icons.person_outline_rounded,
+                      keyboard: admin ? TextInputType.emailAddress : TextInputType.text,
+                      action: TextInputAction.next,
+                      autofillHints: const [AutofillHints.username],
+                      validator: (v) => requiredField(v, admin ? 'E-mail' : 'Username'),
+                    ),
+                    const SizedBox(height: 12),
+                    AppField(
+                      controller: _pass,
+                      label: 'Password',
+                      icon: Icons.lock_outline_rounded,
+                      obscure: !_show,
+                      action: TextInputAction.done,
+                      onSubmitted: (_) => _busy ? null : _submit(),
+                      autofillHints: const [AutofillHints.password],
+                      validator: (v) => requiredField(v, 'Password'),
+                      suffix: IconButton(
+                          tooltip: _show ? 'Hide password' : 'Show password',
+                          icon: Icon(_show ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: c.muted),
+                          onPressed: () => setState(() => _show = !_show)),
+                    ),
+                    if (_error != null) ...[
+                      const SizedBox(height: 12),
+                      _Banner(text: _error!, tone: 'bad', icon: Icons.error_outline_rounded),
+                    ],
+                    const SizedBox(height: 18),
+                    NeuButton(label: 'Sign in', busy: _busy, onPressed: _submit),
+                    if (!admin)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: TextButton(
+                            onPressed: _busy ? null : () => showSheet<void>(context, (_) => _ForgotForm(initialUsername: _user.text.trim())),
+                            child: Text('Forgot password?', style: TextStyle(color: c.accent, fontWeight: FontWeight.w600))),
+                      )
+                    else
+                      TextButton(
+                          onPressed: _busy ? null : _togglePortal,
+                          child: Text('\u2190 Student / Teacher sign in', style: TextStyle(color: c.muted))),
+                    const SizedBox(height: 22),
+                    Text('${AppConfig.schoolTown}', textAlign: TextAlign.center, style: c.small.copyWith(fontSize: 11.5)),
+                    const SizedBox(height: 2),
+                    Text('App version ${AppConfig.appVersion}', textAlign: TextAlign.center, style: c.small.copyWith(fontSize: 11)),
+                  ]),
                 ),
-                const SizedBox(height: 14),
-                TextButton(
-                  onPressed: _busy
-                      ? null
-                      : () => setState(() {
-                            _portal = admin ? LoginPortal.schoolMember : LoginPortal.superAdmin;
-                            _error = null;
-                            _user.clear();
-                            _pass.clear();
-                          }),
-                  child: Text(admin ? '\u2190 Student / Teacher sign in' : 'Super Admin sign in', style: TextStyle(color: c.muted)),
-                ),
-              ]),
+              ),
             ),
           ),
         ),
@@ -185,8 +185,8 @@ class _Banner extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
           color: col.withValues(alpha: 0.13),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: col.withValues(alpha: 0.4))),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: col.withValues(alpha: 0.35))),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Icon(icon, size: 19, color: col),
         const SizedBox(width: 10),

@@ -87,7 +87,7 @@ class BlogView extends StatelessWidget {
                 padding: EdgeInsets.zero,
                 onTap: () => Navigator.of(ctx).push(MaterialPageRoute<void>(builder: (_) => ArticleScreen(article: a))),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if (a.coverUrl != null) NetImage(a.coverUrl, height: 170, width: double.infinity, radius: 20),
+                  if (a.coverUrl != null) NetImage(a.coverUrl, height: 170, width: double.infinity, radius: 0),
                   Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -121,7 +121,7 @@ class ArticleScreen extends StatelessWidget {
         if (article.coverUrl != null)
           Padding(
               padding: const EdgeInsets.only(bottom: 16),
-              child: NetImage(article.coverUrl, height: 200, width: double.infinity, radius: 22)),
+              child: NetImage(article.coverUrl, height: 200, width: double.infinity, radius: 14)),
         Text(article.title, style: c.display),
         const SizedBox(height: 8),
         Text(fmtDate(article.createdAt), style: c.small),
@@ -144,30 +144,24 @@ class GalleryView extends StatelessWidget {
       load: svc.content.gallery,
       skeleton: const _GallerySkeleton(),
       builder: (ctx, items, reload) {
-        final c = AppColors.of(ctx);
         if (items.isEmpty)
           return const PageList(children: [
             EmptyState(icon: Icons.photo_library_outlined, title: 'No photos yet', message: 'School photos will appear here.')
           ]);
         return GridView.builder(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 0.9),
+          padding: const EdgeInsets.only(top: 2, bottom: 40),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 2, crossAxisSpacing: 2),
           itemCount: items.length,
           itemBuilder: (_, i) {
             final g = items[i];
-            return NeuCard(
-              padding: const EdgeInsets.all(6),
-              radius: 18,
-              onTap: () => showFullImage(ctx, g.url, title: g.caption),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Expanded(child: NetImage(g.url, width: double.infinity, height: double.infinity, radius: 14)),
-                if (g.caption.isNotEmpty)
-                  Padding(
-                      padding: const EdgeInsets.fromLTRB(6, 8, 6, 4),
-                      child: Text(g.caption, maxLines: 1, overflow: TextOverflow.ellipsis, style: c.small.copyWith(color: c.text))),
-              ]),
+            return Semantics(
+              button: true,
+              label: g.caption.isEmpty ? 'School photo' : g.caption,
+              child: GestureDetector(
+                onTap: () => showFullImage(ctx, g.url, title: g.caption),
+                child: NetImage(g.url, width: double.infinity, height: double.infinity, radius: 0),
+              ),
             );
           },
         );
@@ -185,12 +179,11 @@ class _GallerySkeleton extends StatelessWidget {
     return Pulse(
       child: GridView.count(
         physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 0.9,
-        children: [for (var i = 0; i < 6; i++) const SkeletonBox(radius: 18)],
+        padding: const EdgeInsets.only(top: 2),
+        crossAxisCount: 3,
+        mainAxisSpacing: 2,
+        crossAxisSpacing: 2,
+        children: [for (var i = 0; i < 15; i++) const SkeletonBox(radius: 0)],
       ),
     );
   }

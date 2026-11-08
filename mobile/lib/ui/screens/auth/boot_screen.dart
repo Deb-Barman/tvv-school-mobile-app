@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../core/config.dart';
 import '../../../state/session_controller.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/insta.dart';
 import '../../widgets/states.dart';
 
 /// Shown while the app checks the stored sign-in. If the server is unreachable the person can retry;
@@ -24,13 +25,7 @@ class BootScreen extends StatelessWidget {
       backgroundColor: c.bg,
       body: Center(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 120,
-            height: 120,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: c.surface, shape: BoxShape.circle, boxShadow: c.raised(3)),
-            child: Image.asset('assets/images/school_logo.png'),
-          ),
+          const SchoolLogo(size: 116),
           const SizedBox(height: 24),
           Text(AppConfig.schoolName, textAlign: TextAlign.center, style: c.display.copyWith(fontSize: 22)),
           const SizedBox(height: 22),

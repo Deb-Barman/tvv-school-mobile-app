@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:flutter/material.dart';
 
 import '../../../data/attendance_stats.dart';
@@ -7,8 +8,10 @@ import '../../../state/app_scope.dart';
 import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
+import '../../widgets/dirty_guard.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
+import '../../../core/clock.dart';
 
 // ================================================================= my attendance (student / teacher)
 
@@ -134,7 +137,7 @@ class _MonthCalendar extends StatefulWidget {
 }
 
 class _MonthCalendarState extends State<_MonthCalendar> {
-  late DateTime _month = DateTime(DateTime.now().year, DateTime.now().month);
+  late DateTime _month = DateTime(schoolNow().year, schoolNow().month);
 
   void _shift(int delta) => setState(() => _month = DateTime(_month.year, _month.month + delta));
 
@@ -144,7 +147,7 @@ class _MonthCalendarState extends State<_MonthCalendar> {
     final leading = DateTime(_month.year, _month.month, 1).weekday - 1;
     final days = DateTime(_month.year, _month.month + 1, 0).day;
     final rows = ((leading + days) / 7).ceil();
-    final today = dayOnly(DateTime.now());
+    final today = dayOnly(schoolNow());
 
     Widget cell(int index) {
       final d = index - leading + 1;
@@ -232,7 +235,11 @@ class AttendanceMarkSheet extends StatefulWidget {
 
 class _AttendanceMarkSheetState extends State<AttendanceMarkSheet> {
   late final Map<String, AttendanceStatus> _marks = {...widget.initial};
+  late Map<String, AttendanceStatus> _baseline = {...widget.initial};
   bool _busy = false;
+
+  /// true while the marks differ from what was last saved.
+  bool get _dirty => !mapEquals(_marks, _baseline);
 
   int get _present => _marks.values.where((s) => s == AttendanceStatus.present).length;
   int get _absent => _marks.values.where((s) => s == AttendanceStatus.absent).length;
@@ -254,7 +261,10 @@ class _AttendanceMarkSheetState extends State<AttendanceMarkSheet> {
     setState(() => _busy = true);
     try {
       final n = await widget.onSave({..._marks});
-      if (mounted) toast(context, 'Attendance saved for $n.');
+      if (mounted) {
+        setState(() => _baseline = {..._marks});
+        toast(context, 'Attendance saved for $n.');
+      }
     } catch (e) {
       if (mounted) toast(context, errorText(e), error: true);
     } finally {
@@ -268,7 +278,10 @@ class _AttendanceMarkSheetState extends State<AttendanceMarkSheet> {
     if (widget.rows.isEmpty)
       return PageList(children: [EmptyState(icon: Icons.groups_outlined, title: widget.emptyTitle, message: widget.emptyMessage)]);
     final unmarked = widget.rows.length - _marks.length;
-    return Column(children: [
+    return DirtyGuard(
+      dirty: _dirty,
+      message: 'Attendance is not saved yet. Leave without saving?',
+      child: Column(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
         child: Row(children: [
@@ -325,7 +338,7 @@ class _AttendanceMarkSheetState extends State<AttendanceMarkSheet> {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
         child: NeuButton(label: 'Save attendance', icon: Icons.check_rounded, busy: _busy, onPressed: _save),
       ),
-    ]);
+    ]));
   }
 }
 
@@ -384,7 +397,7 @@ class _TakeBody extends StatefulWidget {
 
 class _TakeBodyState extends State<_TakeBody> {
   String? _classId;
-  DateTime _date = dayOnly(DateTime.now());
+  DateTime _date = dayOnly(schoolNow());
 
   @override
   void initState() {
@@ -420,7 +433,7 @@ class _TakeBodyState extends State<_TakeBody> {
               value: fmtDateShort(_date),
               icon: Icons.calendar_month_rounded,
               onTap: () async {
-                final d = await pickDate(context, initial: _date, last: dayOnly(DateTime.now()));
+                final d = await pickDate(context, initial: _date, last: dayOnly(schoolNow()));
                 if (d != null) setState(() => _date = dayOnly(d));
               },
             ),
@@ -471,7 +484,7 @@ class TeacherAttendanceAdminView extends StatefulWidget {
 }
 
 class _TeacherAttendanceAdminViewState extends State<TeacherAttendanceAdminView> {
-  DateTime _date = dayOnly(DateTime.now());
+  DateTime _date = dayOnly(schoolNow());
 
   @override
   Widget build(BuildContext context) {
@@ -484,7 +497,7 @@ class _TeacherAttendanceAdminViewState extends State<TeacherAttendanceAdminView>
           value: fmtDate(_date),
           icon: Icons.calendar_month_rounded,
           onTap: () async {
-            final d = await pickDate(context, initial: _date, last: dayOnly(DateTime.now()));
+            final d = await pickDate(context, initial: _date, last: dayOnly(schoolNow()));
             if (d != null) setState(() => _date = dayOnly(d));
           },
         ),

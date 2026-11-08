@@ -64,9 +64,10 @@ class _TvvAppState extends State<TvvApp> {
           theme: buildTheme(Brightness.light),
           darkTheme: buildTheme(Brightness.dark),
           themeMode: _theme.mode,
-          // Keep layouts intact for people who use very large system text, without ignoring their setting.
-          builder: (context, child) =>
-              MediaQuery.withClampedTextScaling(minScaleFactor: 0.9, maxScaleFactor: 1.3, child: child ?? const SizedBox.shrink()),
+          // Keep layouts intact for people who use very large system text (or a big "display size"), without ignoring
+          // their setting: text may grow by up to 15%, and nothing is ever drawn wider than the screen.
+          builder: (context, child) => MediaQuery.withClampedTextScaling(
+              minScaleFactor: 0.9, maxScaleFactor: 1.15, child: ClipRect(child: child ?? const SizedBox.shrink())),
           home: ListenableBuilder(
             listenable: _session,
             builder: (context, _) {

@@ -7,6 +7,7 @@ import '../../../state/app_scope.dart';
 import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
+import '../../widgets/dirty_guard.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
 
@@ -273,8 +274,12 @@ class _MarksGridState extends State<_MarksGrid> {
     for (final s in widget.students)
       s.userId: TextEditingController(text: widget.existing[s.userId] == null ? '' : marks(widget.existing[s.userId]!))
   };
+  late final Map<String, String> _saved = {for (final e in _ctl.entries) e.key: e.value.text.trim()};
   bool _busy = false;
   String? _error;
+
+  /// true while any mark differs from what is saved on the server.
+  bool get _dirty => _ctl.entries.any((e) => e.value.text.trim() != (_saved[e.key] ?? ''));
 
   @override
   void dispose() {
@@ -315,7 +320,14 @@ class _MarksGridState extends State<_MarksGrid> {
     });
     try {
       final n = await widget.onSave(out, full);
-      if (mounted) toast(context, 'Marks saved for $n students.');
+      if (mounted) {
+        setState(() {
+          for (final e in _ctl.entries) {
+            _saved[e.key] = e.value.text.trim();
+          }
+        });
+        toast(context, 'Marks saved for $n students.');
+      }
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (e) {
@@ -331,7 +343,10 @@ class _MarksGridState extends State<_MarksGrid> {
     if (widget.students.isEmpty)
       return const EmptyState(
           icon: Icons.groups_outlined, title: 'No students in this class', message: 'Students appear once the Super Admin adds them.');
-    return Column(children: [
+    return DirtyGuard(
+      dirty: _dirty,
+      message: 'Some marks are not saved yet. Leave without saving?',
+      child: Column(children: [
       Expanded(
         child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 12), children: [
           for (final s in widget.students)
@@ -350,6 +365,7 @@ class _MarksGridState extends State<_MarksGrid> {
                     width: 92,
                     child: TextField(
                       controller: _ctl[s.userId],
+                      onChanged: (_) => setState(() {}),
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       textAlign: TextAlign.center,
                       style: c.bodyStrong,
@@ -358,7 +374,7 @@ class _MarksGridState extends State<_MarksGrid> {
                         isDense: true,
                         filled: true,
                         fillColor: c.inset,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: c.edge)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: c.edge)),
                         enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: c.edge)),
                         focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: c.accent, width: 1.6)),
@@ -373,7 +389,7 @@ class _MarksGridState extends State<_MarksGrid> {
       Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
           child: SaveBar(onSave: _busy ? null : _save, busy: _busy, error: _error, label: 'Save marks')),
-    ]);
+    ]));
   }
 }
 

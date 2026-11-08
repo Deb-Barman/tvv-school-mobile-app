@@ -10,6 +10,8 @@ ThemeData buildTheme(Brightness brightness) {
     surface: c.surface,
     onSurface: c.text,
     error: c.bad,
+    surfaceTint: Colors.transparent,
+    outline: c.edge,
   );
   return ThemeData(
     useMaterial3: true,
@@ -17,12 +19,15 @@ ThemeData buildTheme(Brightness brightness) {
     colorScheme: scheme,
     scaffoldBackgroundColor: c.bg,
     canvasColor: c.bg,
+    dividerColor: c.edge,
     splashFactory: InkRipple.splashFactory,
+    highlightColor: Colors.transparent,
     visualDensity: VisualDensity.standard,
     textSelectionTheme: TextSelectionThemeData(cursorColor: c.accent, selectionHandleColor: c.accent),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      backgroundColor: c.isDark ? const Color(0xFF2E3350) : const Color(0xFF2A2F46),
+      backgroundColor: c.isDark ? const Color(0xFF2E2E36) : const Color(0xFF1F1F24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       contentTextStyle: const TextStyle(color: Colors.white, fontSize: 14),
     ),
   );

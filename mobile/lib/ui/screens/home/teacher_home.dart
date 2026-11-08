@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/clock.dart';
 import '../../../data/models/academics.dart';
 import '../../../data/models/content.dart';
 import '../../../state/app_scope.dart';
 import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
+import '../../widgets/insta.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
 import 'dashboard_parts.dart';
@@ -41,55 +43,49 @@ class TeacherHomeView extends StatelessWidget {
       },
       builder: (ctx, d, reload) {
         final c = AppColors.of(ctx);
-        final wd = DateTime.now().weekday - 1;
+        final now = schoolNow();
+        final wd = now.weekday - 1;
         final today = d.mine.where((e) => e.weekday == wd).toList()..sort((a, b) => a.period.compareTo(b.period));
         final labels = {for (final k in d.classes) k.id: k.label};
         final open = d.homework.where((h) => h.phase == 'open').length;
-        final exams = d.exams.where((e) => e.date != null && !e.date!.isBefore(dayOnly(DateTime.now()))).toList()
+        final exams = d.exams.where((e) => e.date != null && !e.date!.isBefore(dayOnly(now))).toList()
           ..sort((a, b) => a.date!.compareTo(b.date!));
-        return PageList(children: [
-          NeuCard(
-            depth: 3,
-            radius: 26,
-            padding: const EdgeInsets.all(20),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(greeting().toUpperCase(), style: c.eyebrow),
-              const SizedBox(height: 4),
-              Text(me.fullName, style: c.display),
-              const SizedBox(height: 10),
-              Wrap(spacing: 8, runSpacing: 6, children: [
-                Pill(wd > 5 ? 'No classes today' : plural(today.where((e) => !e.isBreak).length, 'period') + ' today', tone: 'good'),
-                Pill('$open open homework', tone: 'warn'),
-              ]),
-            ]),
-          ),
-          const SizedBox(height: 14),
-          QuickActionRow(actions: [
-            QuickAction(icon: Icons.fact_check_outlined, label: 'Take attendance', onTap: () => onOpen('take_attendance')),
-            QuickAction(icon: Icons.assignment_add, label: 'Set homework', onTap: () => onOpen('homework')),
-            QuickAction(icon: Icons.edit_note_rounded, label: 'Enter marks', onTap: () => onOpen('results_entry')),
+        return PageList(padding: const EdgeInsets.fromLTRB(12, 0, 12, 40), children: [
+          StoryRow(bubbles: [
+            StoryBubble(icon: Icons.fact_check_outlined, label: 'Attendance', onTap: () => onOpen('take_attendance')),
+            StoryBubble(icon: Icons.assignment_outlined, label: 'Homework', badge: open, onTap: () => onOpen('homework')),
+            StoryBubble(icon: Icons.edit_note_rounded, label: 'Marks', onTap: () => onOpen('results_entry')),
+            StoryBubble(icon: Icons.calendar_view_week_outlined, label: 'Timetable', onTap: () => onOpen('timetable')),
+            StoryBubble(icon: Icons.quiz_outlined, label: 'Exams', onTap: () => onOpen('exams')),
+            StoryBubble(icon: Icons.groups_outlined, label: 'Students', onTap: () => onOpen('students')),
+            StoryBubble(icon: Icons.campaign_outlined, label: 'Notices', onTap: () => onOpen('notices')),
+            StoryBubble(icon: Icons.event_available_outlined, label: 'My days', onTap: () => onOpen('my_attendance')),
+          ]),
+          GreetingHeader(name: me.fullName, chips: [
+            Pill(wd > 5 ? 'No classes today' : plural(today.where((e) => !e.isBreak).length, 'period') + ' today', tone: 'good'),
+            Pill('$open open homework', tone: 'warn'),
           ]),
           SectionTitle("Today's periods", trailing: TextButton(onPressed: () => onOpen('timetable'), child: const Text('Timetable'))),
           if (wd > 5)
-            const NeuCard(child: Text('It\u2019s Sunday \u2014 no classes today.'))
+            const NeuCard(inset: true, child: Text('It\u2019s Sunday \u2014 no classes today.'))
           else if (today.isEmpty)
-            const NeuCard(child: Text('You have no periods today.'))
+            const NeuCard(inset: true, child: Text('You have no periods today.'))
           else
             for (final e in today)
               Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: NeuCard(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  radius: 18,
+                  radius: 14,
                   child: Row(children: [
                     SizedBox(
-                        width: 70, child: Text(fmtTime(e.startTime), style: c.small.copyWith(color: c.text, fontWeight: FontWeight.w600))),
+                        width: 78, child: Text(fmtTime(e.startTime), style: c.small.copyWith(color: c.text, fontWeight: FontWeight.w600))),
                     Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(e.title, style: c.bodyStrong),
                       if (labels[e.classId] != null) Text(labels[e.classId]!, style: c.small)
                     ])),
-                    if (e.room.isNotEmpty) Text('Rm ${e.room}', style: c.small),
+                    if (e.room.isNotEmpty) Padding(padding: const EdgeInsets.only(left: 6), child: Text('Rm ${e.room}', style: c.small)),
                   ]),
                 ),
               ),
@@ -97,34 +93,35 @@ class TeacherHomeView extends StatelessWidget {
             SectionTitle('Upcoming exams', trailing: TextButton(onPressed: () => onOpen('exams'), child: const Text('Schedule'))),
             for (final e in exams.take(3))
               Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: NeuCard(
                   padding: const EdgeInsets.all(14),
-                  radius: 18,
+                  radius: 14,
                   child: Row(children: [
                     Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text('${e.subjectName} \u00b7 ${e.className}', style: c.bodyStrong),
                       Text('${e.name} \u00b7 ${fmtDate(e.date)}', style: c.small)
                     ])),
+                    const SizedBox(width: 8),
                     Pill(relativeDay(e.date), tone: 'good'),
                   ]),
                 ),
               ),
           ],
           SectionTitle('Latest notices', trailing: TextButton(onPressed: () => onOpen('notices'), child: const Text('All notices'))),
-          if (d.notices.isEmpty) const NeuCard(child: Text('No notices right now.')),
+          if (d.notices.isEmpty) const NeuCard(inset: true, child: Text('No notices right now.')),
           for (final n in d.notices.take(3))
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: NeuCard(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: PostCard(
+                title: n.createdByName.isNotEmpty ? n.createdByName : 'School office',
+                subtitle: fmtDate(n.createdAt),
                 onTap: () => onOpen('notices'),
-                padding: const EdgeInsets.all(14),
-                radius: 18,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(n.title, style: c.bodyStrong),
-                  const SizedBox(height: 2),
-                  Text(n.body, maxLines: 2, overflow: TextOverflow.ellipsis, style: c.small.copyWith(fontSize: 13.5))
+                  Text(n.title, style: c.h2),
+                  const SizedBox(height: 4),
+                  Text(n.body, maxLines: 3, overflow: TextOverflow.ellipsis, style: c.body),
                 ]),
               ),
             ),
