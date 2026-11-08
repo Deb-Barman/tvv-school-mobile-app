@@ -6,8 +6,10 @@ import '../../../state/app_scope.dart';
 import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
+import '../../widgets/insta.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
+import '../../../core/clock.dart';
 
 /// School notices. Everyone reads; only the Super Admin sees the add / edit / delete controls
 /// (the server refuses everyone else anyway).
@@ -44,20 +46,14 @@ class NoticesView extends StatelessWidget {
           for (final n in items)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
-              child: NeuCard(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(12)),
-                      child: Icon(Icons.campaign_rounded, color: c.accent, size: 22),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(n.title, style: c.h2)),
-                    if (isAdmin)
-                      PopupMenuButton<String>(
-                        icon: Icon(Icons.more_vert_rounded, color: c.muted),
+              child: PostCard(
+                title: n.createdByName.isNotEmpty ? n.createdByName : 'School office',
+                subtitle: [fmtDate(n.createdAt), if (n.targetClass.isNotEmpty) n.targetClass].join(' \u00b7 '),
+                trailing: isAdmin
+                    ? PopupMenuButton<String>(
+                        icon: Icon(Icons.more_horiz_rounded, color: c.text),
+                        color: c.surface,
+                        surfaceTintColor: Colors.transparent,
                         onSelected: (v) async {
                           if (v == 'edit') {
                             final saved = await showSheet<bool>(ctx, (_) => NoticeForm(existing: n));
@@ -77,16 +73,12 @@ class NoticesView extends StatelessWidget {
                           PopupMenuItem(value: 'edit', child: Text('Edit')),
                           PopupMenuItem(value: 'delete', child: Text('Delete')),
                         ],
-                      ),
-                  ]),
-                  const SizedBox(height: 10),
+                      )
+                    : null,
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(n.title, style: c.h2),
+                  const SizedBox(height: 6),
                   Text(n.body, style: c.body),
-                  const SizedBox(height: 12),
-                  Wrap(spacing: 8, runSpacing: 6, crossAxisAlignment: WrapCrossAlignment.center, children: [
-                    Text(fmtDate(n.createdAt), style: c.small),
-                    if (n.targetClass.isNotEmpty) Pill(n.targetClass),
-                    if (n.createdByName.isNotEmpty) Text('\u00b7 ${n.createdByName}', style: c.small),
-                  ]),
                 ]),
               ),
             ),
@@ -190,7 +182,7 @@ class EventsView extends StatelessWidget {
       load: svc.content.events,
       builder: (ctx, items, reload) {
         final c = AppColors.of(ctx);
-        final today = dayOnly(DateTime.now());
+        final today = dayOnly(schoolNow());
         final upcoming = items.where((e) => e.date != null && !e.date!.isBefore(today)).toList()
           ..sort((a, b) => a.date!.compareTo(b.date!));
         final past = items.where((e) => e.date == null || e.date!.isBefore(today)).toList()
@@ -294,7 +286,7 @@ class _EventFormState extends State<EventForm> {
   late final _title = TextEditingController(text: widget.existing?.title);
   late final _desc = TextEditingController(text: widget.existing?.description);
   late final _audience = TextEditingController(text: widget.existing?.audience);
-  late DateTime _date = widget.existing?.date ?? DateTime.now();
+  late DateTime _date = widget.existing?.date ?? schoolNow();
   bool _busy = false;
   String? _error;
 
@@ -345,7 +337,7 @@ class _EventFormState extends State<EventForm> {
               icon: Icons.calendar_month_rounded,
               onTap: () async {
                 final d = await pickDate(context,
-                    initial: _date, first: DateTime(DateTime.now().year - 1), last: DateTime(DateTime.now().year + 3, 12, 31));
+                    initial: _date, first: DateTime(schoolNow().year - 1), last: DateTime(schoolNow().year + 3, 12, 31));
                 if (d != null) setState(() => _date = d);
               },
             ),
