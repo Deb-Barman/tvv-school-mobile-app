@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tvv_mobile/core/api_client.dart';
+import 'package:tvv_mobile/core/api_exception.dart';
 import 'package:tvv_mobile/core/response_cache.dart';
 import 'package:tvv_mobile/core/token_store.dart';
 
@@ -47,7 +48,8 @@ void main() {
       retryDelays: const [],
     );
     await api.setSession(access: 'a', refresh: 'r');
-    expect(() => api.getMap('/never-seen/'), throwsA(isA<Exception>()));
+    // Wait for the failed request to finish BEFORE closing the client (closing it mid-request is what broke this test before).
+    await expectLater(api.getMap('/never-seen/'), throwsA(isA<ApiException>()));
     api.close();
   });
 }
