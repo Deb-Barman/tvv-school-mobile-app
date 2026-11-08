@@ -21,7 +21,7 @@ class PublicProfileScreen extends StatelessWidget {
       title: fallbackName,
       body: AsyncPage<PublicProfile>(
         load: () => svc.profile.publicProfile(role: role, username: username),
-        skeleton: const DashboardSkeleton(),
+        skeleton: const ProfileSkeleton(),
         builder: (ctx, p, reload) => PageList(children: profileSections(ctx, p)),
       ),
     );
