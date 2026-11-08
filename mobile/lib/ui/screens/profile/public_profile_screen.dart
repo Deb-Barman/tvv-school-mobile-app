@@ -54,7 +54,7 @@ List<Widget> profileSections(BuildContext ctx, PublicProfile p) {
         child: NeuCard(
             child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [Text(title.toUpperCase(), style: c.eyebrow), const SizedBox(height: 10), child])),
+                children: [Text(title, style: c.h2), const SizedBox(height: 10), child])),
       );
 
   Widget chips(List<String> items, [String tone = 'accent']) =>
@@ -62,23 +62,32 @@ List<Widget> profileSections(BuildContext ctx, PublicProfile p) {
 
   final photo = p.photo;
   return [
-    NeuCard(
-      depth: 3,
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.only(bottom: 14),
-      child: Column(children: [
-        Avatar(name: p.fullName, url: photo, size: 96, onTap: photo == null ? null : () => showFullImage(ctx, photo, title: p.fullName)),
-        const SizedBox(height: 14),
-        Text(p.fullName, textAlign: TextAlign.center, style: c.display.copyWith(fontSize: 23)),
-        if (p.headline.isNotEmpty)
-          Padding(padding: const EdgeInsets.only(top: 4), child: Text(p.headline, textAlign: TextAlign.center, style: c.body)),
-        const SizedBox(height: 12),
-        Wrap(alignment: WrapAlignment.center, spacing: 8, runSpacing: 6, children: [
-          Pill(p.role == 'teacher' ? 'Teacher' : 'Student', tone: p.role == 'teacher' ? 'warn' : 'accent'),
-          if (p.classLabel != null) Pill(p.classLabel!, tone: 'good'),
-          if (p.department != null) Pill(p.department!),
-          if (p.city.isNotEmpty) Pill(p.city, icon: Icons.place_outlined),
+    Padding(
+      padding: const EdgeInsets.fromLTRB(4, 4, 4, 18),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Avatar(name: p.fullName, url: photo, size: 92, ring: true, onTap: photo == null ? null : () => showFullImage(ctx, photo, title: p.fullName)),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(p.fullName, maxLines: 2, overflow: TextOverflow.ellipsis, style: c.h1),
+              const SizedBox(height: 8),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                Pill(p.role == 'teacher' ? 'Teacher' : 'Student', tone: p.role == 'teacher' ? 'warn' : 'accent'),
+                if (p.classLabel != null) Pill(p.classLabel!, tone: 'good'),
+              ]),
+            ]),
+          ),
         ]),
+        if (p.headline.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Text(p.headline, style: c.bodyStrong)),
+        if (p.department != null || p.city.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Wrap(spacing: 6, runSpacing: 6, children: [
+              if (p.department != null) Pill(p.department!),
+              if (p.city.isNotEmpty) Pill(p.city, icon: Icons.place_outlined),
+            ]),
+          ),
       ]),
     ),
     if (p.quote.isNotEmpty)
