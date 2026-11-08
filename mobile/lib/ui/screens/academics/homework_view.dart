@@ -8,6 +8,7 @@ import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
+import '../../../core/clock.dart';
 
 class _HwData {
   _HwData(this.homework, this.classes, this.subjects);
@@ -290,8 +291,8 @@ class _HomeworkFormState extends State<HomeworkForm> {
   late final _details = TextEditingController(text: widget.existing?.details);
   late String? _classId = widget.existing?.classId ?? widget.initialClassId;
   String? _subjectId;
-  late DateTime _start = widget.existing?.startDate ?? DateTime.now();
-  late DateTime _due = widget.existing?.dueDate ?? DateTime.now().add(const Duration(days: 3));
+  late DateTime _start = widget.existing?.startDate ?? schoolNow();
+  late DateTime _due = widget.existing?.dueDate ?? schoolNow().add(const Duration(days: 3));
   bool _busy = false;
   String? _error;
 
