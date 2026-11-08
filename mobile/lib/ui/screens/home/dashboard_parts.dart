@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/clock.dart';
-import '../../../state/app_scope.dart';
 import '../../theme/tokens.dart';
-import '../../widgets/common.dart';
+import '../../widgets/me_avatar.dart';
 import '../../widgets/neu.dart';
 
 String greeting() {
@@ -26,7 +25,7 @@ class GreetingHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
       child: Row(children: [
-        Avatar(name: context.me.fullName, size: 68, ring: true),
+        const MeAvatar(size: 68, ring: true),
         const SizedBox(width: 16),
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

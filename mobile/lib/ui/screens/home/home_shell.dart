@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/config.dart';
 import '../../../state/app_scope.dart';
@@ -6,6 +7,7 @@ import '../../features.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
 import '../../widgets/insta.dart';
+import '../../widgets/me_avatar.dart';
 
 /// Role-based home: Instagram-style bottom bar (4 main sections + your picture), lazy tabs, back returns to the first tab.
 class HomeShell extends StatefulWidget {
@@ -27,6 +29,9 @@ class _HomeShellState extends State<HomeShell> {
     if (!_ready) {
       _ready = true;
       _nav = navFor(context.me, _open);
+      final svc = context.svc;
+      svc.myPhoto.value = null; // a different person may have been signed in before
+      svc.refreshMyPhoto();
     }
   }
 
@@ -48,7 +53,6 @@ class _HomeShellState extends State<HomeShell> {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-    final me = context.me;
     final moreIndex = _nav.tabs.length;
     final titles = [..._nav.tabs.map((f) => f.title), 'Menu'];
     final notices = _nav.find('notices');
@@ -121,7 +125,6 @@ class _HomeShellState extends State<HomeShell> {
         bottomNavigationBar: _BottomBar(
           index: _index,
           tabs: _nav.tabs,
-          meName: me.fullName,
           onTap: (i) => setState(() {
             _index = i;
             _visited.add(i);
@@ -138,10 +141,9 @@ void pushFeature(BuildContext context, Feature f) {
 
 /// Icons only, hairline on top, filled icon for the selected tab, your own picture as the last tab.
 class _BottomBar extends StatelessWidget {
-  const _BottomBar({required this.index, required this.tabs, required this.meName, required this.onTap});
+  const _BottomBar({required this.index, required this.tabs, required this.onTap});
   final int index;
   final List<Feature> tabs;
-  final String meName;
   final ValueChanged<int> onTap;
 
   @override
@@ -153,7 +155,10 @@ class _BottomBar extends StatelessWidget {
             selected: i == index,
             label: label,
             child: InkResponse(
-              onTap: () => onTap(i),
+              onTap: () {
+                HapticFeedback.selectionClick();
+                onTap(i);
+              },
               radius: 32,
               child: SizedBox(height: 52, child: Center(child: ExcludeSemantics(child: icon))),
             ),
@@ -166,7 +171,7 @@ class _BottomBar extends StatelessWidget {
         child: Row(children: [
           for (var i = 0; i < tabs.length; i++)
             cell(i, tabs[i].title, Icon(i == index ? (tabs[i].activeIcon ?? tabs[i].icon) : tabs[i].icon, size: 27, color: i == index ? c.text : c.muted)),
-          cell(tabs.length, 'Menu', Avatar(name: meName, size: 30, ring: tabs.length == index)),
+          cell(tabs.length, 'Menu', MeAvatar(size: 30, ring: tabs.length == index)),
         ]),
       ),
     );
@@ -187,7 +192,7 @@ class MoreView extends StatelessWidget {
       Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         child: Row(children: [
-          Avatar(name: me.fullName, size: 84, ring: true),
+          const MeAvatar(size: 84, ring: true),
           const SizedBox(width: 18),
           Expanded(
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

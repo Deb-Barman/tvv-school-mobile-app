@@ -19,10 +19,11 @@ class MyProfileView extends StatelessWidget {
     final me = context.me;
     return AsyncPage<MyProfile>(
       load: svc.profile.mine,
-      skeleton: const DashboardSkeleton(),
+      skeleton: const ProfileSkeleton(),
       builder: (ctx, p, reload) {
         final c = AppColors.of(ctx);
         final photo = p.displayPhoto;
+        if (svc.myPhoto.value != photo) WidgetsBinding.instance.addPostFrameCallback((_) => svc.myPhoto.value = photo);
         return PageList(children: [
           NeuCard(
             depth: 3,

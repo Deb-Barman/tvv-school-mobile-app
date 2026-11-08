@@ -7,6 +7,7 @@ import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
 import '../../widgets/insta.dart';
+import 'notice_detail_screen.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
 import '../../../core/clock.dart';
@@ -22,6 +23,7 @@ class NoticesView extends StatelessWidget {
     final isAdmin = context.me.isSuperAdmin;
     return AsyncPage<List<Notice>>(
       load: svc.content.notices,
+      skeleton: const PostFeedSkeleton(),
       builder: (ctx, items, reload) {
         final c = AppColors.of(ctx);
         return PageList(children: [
@@ -49,6 +51,7 @@ class NoticesView extends StatelessWidget {
               child: PostCard(
                 title: n.createdByName.isNotEmpty ? n.createdByName : 'School office',
                 subtitle: [fmtDate(n.createdAt), if (n.targetClass.isNotEmpty) n.targetClass].join(' \u00b7 '),
+                onTap: () => openNotice(ctx, n),
                 trailing: isAdmin
                     ? PopupMenuButton<String>(
                         icon: Icon(Icons.more_horiz_rounded, color: c.text),
@@ -78,7 +81,9 @@ class NoticesView extends StatelessWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(n.title, style: c.h2),
                   const SizedBox(height: 6),
-                  Text(n.body, style: c.body),
+                  Text(n.body, maxLines: 5, overflow: TextOverflow.ellipsis, style: c.body),
+                  if (n.body.length > 200 || '\n'.allMatches(n.body).length > 3)
+                    Padding(padding: const EdgeInsets.only(top: 8), child: Text('Read more', style: TextStyle(color: c.accent, fontWeight: FontWeight.w700, fontSize: 13.5))),
                 ]),
               ),
             ),

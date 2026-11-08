@@ -8,6 +8,7 @@ import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
 import '../../widgets/insta.dart';
+import '../content/notice_detail_screen.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
 import 'dashboard_parts.dart';
@@ -117,7 +118,7 @@ class TeacherHomeView extends StatelessWidget {
               child: PostCard(
                 title: n.createdByName.isNotEmpty ? n.createdByName : 'School office',
                 subtitle: fmtDate(n.createdAt),
-                onTap: () => onOpen('notices'),
+                onTap: () => openNotice(ctx, n),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Text(n.title, style: c.h2),
                   const SizedBox(height: 4),

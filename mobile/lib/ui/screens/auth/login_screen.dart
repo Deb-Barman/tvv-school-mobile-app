@@ -81,7 +81,11 @@ class _LoginScreenState extends State<LoginScreen> {
     final notice = context.session.notice;
     return Scaffold(
       backgroundColor: c.bg,
-      body: SafeArea(
+      body: DecoratedBox(
+        // A soft violet glow behind the seal.
+        decoration: BoxDecoration(
+            gradient: LinearGradient(begin: Alignment.topCenter, end: const Alignment(0, -0.1), colors: [c.accent.withValues(alpha: c.isDark ? 0.22 : 0.12), c.bg])),
+        child: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
@@ -166,6 +170,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

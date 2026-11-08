@@ -24,5 +24,5 @@ class AppConfig {
   static const String motto = 'Knowledge \u00b7 Character \u00b7 Progress';
   static const int establishedYear = 1964;
 
-  static const String appVersion = '1.1.0';
+  static const String appVersion = '1.2.0';
 }

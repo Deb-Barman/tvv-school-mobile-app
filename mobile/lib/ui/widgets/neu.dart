@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
+import 'insta.dart';
 
 /// The building block of the whole UI: a flat surface with a hairline border and rounded corners
 /// (names kept from the old design so every screen picks up the new look automatically).
@@ -37,9 +38,12 @@ class NeuCard extends StatelessWidget {
     if (onTap != null || onLongPress != null) {
       body = InkWell(borderRadius: shape, onTap: onTap, onLongPress: onLongPress, child: body);
     }
+    final tappable = onTap != null || onLongPress != null;
     return Padding(
       padding: margin,
-      child: DecoratedBox(
+      child: PressScale(
+        enabled: tappable,
+        child: DecoratedBox(
         decoration: BoxDecoration(
           color: color ?? (inset ? c.inset : c.surface),
           borderRadius: shape,
@@ -52,6 +56,7 @@ class NeuCard extends StatelessWidget {
           borderRadius: shape,
           child: onTap != null ? Semantics(button: true, child: body) : body,
         ),
+      ),
       ),
     );
   }
