@@ -1,4 +1,3 @@
-# <<<<<<< Devlopment-by-DebBarman
 name: Mobile app - test, then build Android APK
 
 # 1. TEST job : analyses the code and runs every unit + widget test.
@@ -6,13 +5,6 @@ name: Mobile app - test, then build Android APK
 #   * Every push to main that touches /mobile : test + build.
 #   * Manually: Actions tab -> "Mobile app - test, then build Android APK" -> Run workflow.
 #     (Emergency only: tick "Skip tests" to build the APK even if a test is failing.)
-# =======
-name: Mobile app - build Android APK
-
-# Builds ONLY the Android APK of the Flutter app in /mobile, in the cloud (no laptop needed).
-#   * Every push to main that touches /mobile : builds the APK.
-#   * Manually: Actions tab -> "Mobile app - build Android APK" -> Run workflow.
-# >>>>>>> main
 #
 # WHERE TO DOWNLOAD (on your phone):
 #   1. Releases page of this repo -> the release called "mobile-latest" -> tap TVV-School.apk   (easiest)
@@ -22,14 +14,11 @@ name: Mobile app - build Android APK
 
 on:
   workflow_dispatch:
-# <<<<<<< Devlopment-by-DebBarman
     inputs:
       skip_tests:
         description: "Emergency only: build the APK without running the tests"
         type: boolean
         default: false
-# =======
-# >>>>>>> main
   push:
     branches: [main]
     paths:
@@ -50,7 +39,6 @@ env:
   WEBSITE_URL: ${{ vars.TVV_WEBSITE_URL || 'https://tufanganj-vivekanand-vidyalaya.vercel.app' }}
 
 jobs:
-# <<<<<<< Devlopment-by-DebBarman
   test:
     name: 1 - Analyse + test
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.skip_tests) }}
@@ -106,10 +94,6 @@ jobs:
     needs: test
     # Runs after the tests passed - or when the tests were skipped on purpose (never after a failed test).
     if: ${{ !failure() && !cancelled() }}
-# =======
-  apk:
-    name: Build APK
-# >>>>>>> main
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -147,17 +131,6 @@ jobs:
       - name: App icons from the school seal
         run: dart run flutter_launcher_icons
 
-# <<<<<<< Devlopment-by-DebBarman
-# =======
-      # Informational only: these never stop the APK from being built (a real compile error would stop the build anyway).
-      - name: Analyse (informational)
-        run: flutter analyze --no-fatal-infos --no-fatal-warnings
-        continue-on-error: true
-      - name: Tests (informational)
-        run: flutter test
-        continue-on-error: true
-
-# >>>>>>> main
       # Optional: sign with your own key when these four secrets exist (see docs/MOBILE_SETUP.md). Otherwise a test key is used.
       - name: Release signing (only if the keystore secrets exist)
         env:
