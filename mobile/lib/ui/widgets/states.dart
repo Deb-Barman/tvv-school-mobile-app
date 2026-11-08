@@ -41,7 +41,7 @@ class SkeletonBox extends StatelessWidget {
     return Container(
         width: width,
         height: height,
-        decoration: BoxDecoration(color: c.inset, borderRadius: BorderRadius.circular(radius), border: Border.all(color: c.edge)));
+        decoration: BoxDecoration(color: c.inset, borderRadius: BorderRadius.circular(radius)));
   }
 }
 
@@ -58,18 +58,19 @@ class ListSkeleton extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         children: [
-          if (header) ...[const SkeletonBox(height: 120, radius: 24), const SizedBox(height: 16)],
+          if (header) ...[const SkeletonBox(height: 120, radius: 16), const SizedBox(height: 16)],
           for (var i = 0; i < count; i++)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: NeuCard(
                 padding: const EdgeInsets.all(14),
+                inset: true,
                 child: Row(children: [
                   const SkeletonBox(width: 44, height: 44, radius: 22),
                   const SizedBox(width: 14),
                   Expanded(
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    SkeletonBox(width: 140.0 + (i % 3) * 30, height: 14),
+                    Align(alignment: Alignment.centerLeft, child: FractionallySizedBox(widthFactor: 0.5 + 0.15 * (i % 3), child: const SkeletonBox(height: 14))),
                     const SizedBox(height: 10),
                     const SkeletonBox(height: 11),
                   ])),
@@ -93,19 +94,20 @@ class DashboardSkeleton extends StatelessWidget {
         physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         children: const [
-          SkeletonBox(height: 150, radius: 26),
-          SizedBox(height: 16),
-          Row(children: [
-            Expanded(child: SkeletonBox(height: 92, radius: 20)),
-            SizedBox(width: 12),
-            Expanded(child: SkeletonBox(height: 92, radius: 20)),
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            SkeletonBox(width: 62, height: 62, radius: 31),
+            SkeletonBox(width: 62, height: 62, radius: 31),
+            SkeletonBox(width: 62, height: 62, radius: 31),
+            SkeletonBox(width: 62, height: 62, radius: 31),
           ]),
+          SizedBox(height: 18),
+          SkeletonBox(height: 140, radius: 16),
           SizedBox(height: 16),
-          SkeletonBox(height: 70, radius: 20),
+          SkeletonBox(height: 64, radius: 14),
           SizedBox(height: 12),
-          SkeletonBox(height: 70, radius: 20),
+          SkeletonBox(height: 64, radius: 14),
           SizedBox(height: 12),
-          SkeletonBox(height: 70, radius: 20),
+          SkeletonBox(height: 64, radius: 14),
         ],
       ),
     );
@@ -127,7 +129,7 @@ class EmptyState extends StatelessWidget {
         Container(
           width: 84,
           height: 84,
-          decoration: BoxDecoration(color: c.surface, shape: BoxShape.circle, boxShadow: c.raised(2)),
+          decoration: BoxDecoration(color: c.inset, shape: BoxShape.circle),
           child: Icon(icon, size: 36, color: c.accent),
         ),
         const SizedBox(height: 20),
@@ -157,7 +159,7 @@ class ErrorState extends StatelessWidget {
           Container(
             width: 84,
             height: 84,
-            decoration: BoxDecoration(color: c.surface, shape: BoxShape.circle, boxShadow: c.raised(2)),
+            decoration: BoxDecoration(color: c.inset, shape: BoxShape.circle),
             child: Icon(offline ? Icons.wifi_off_rounded : Icons.error_outline_rounded, size: 36, color: c.bad),
           ),
           const SizedBox(height: 20),

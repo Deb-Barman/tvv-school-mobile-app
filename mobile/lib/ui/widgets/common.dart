@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_exception.dart';
 import '../theme/tokens.dart';
+import '../../core/clock.dart';
+import 'insta.dart';
 import 'neu.dart';
 
 // ------------------------------------------------------------------ feedback
@@ -33,7 +35,8 @@ Future<bool> confirm(BuildContext context,
     context: context,
     builder: (ctx) => AlertDialog(
       backgroundColor: c.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Text(title, style: c.h2),
       content: Text(message, style: c.body),
       actions: [
@@ -74,7 +77,7 @@ Future<T?> showSheet<T>(BuildContext context, WidgetBuilder builder) {
     useSafeArea: true,
     showDragHandle: true,
     backgroundColor: c.surface,
-    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
     builder: (ctx) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
       child: SingleChildScrollView(child: builder(ctx)),
@@ -104,7 +107,7 @@ class SheetBody extends StatelessWidget {
   }
 }
 
-/// Neumorphic replacement for a dropdown: opens a clean list in a sheet.
+/// Replacement for a dropdown: opens a clean list in a sheet.
 Future<T?> pickOne<T>(BuildContext context,
     {required String title, required List<T> options, required String Function(T) labelOf, T? selected, String Function(T)? subtitleOf}) {
   final c = AppColors.of(context);
@@ -118,11 +121,12 @@ Future<T?> pickOne<T>(BuildContext context,
               padding: const EdgeInsets.symmetric(vertical: 24), child: Center(child: Text('Nothing to choose from yet.', style: c.small))),
         for (final o in options)
           Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: 8),
             child: NeuCard(
               inset: o != selected,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              radius: 16,
+              color: o == selected ? c.accentSoft : null,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+              radius: 12,
               onTap: () => Navigator.of(ctx).pop(o),
               child: Row(children: [
                 Expanded(
@@ -160,7 +164,7 @@ class PickerField extends StatelessWidget {
     final c = AppColors.of(context);
     return NeuCard(
       inset: true,
-      radius: 16,
+      radius: 12,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       onTap: onTap,
       child: Row(children: [
@@ -181,7 +185,7 @@ class PickerField extends StatelessWidget {
 }
 
 Future<DateTime?> pickDate(BuildContext context, {DateTime? initial, DateTime? first, DateTime? last}) {
-  final now = DateTime.now();
+  final now = schoolNow();
   final f = first ?? DateTime(now.year - 3);
   final l = last ?? DateTime(now.year + 3, 12, 31);
   var i = initial ?? now;
@@ -232,7 +236,7 @@ class AppField extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     OutlineInputBorder border(Color col, [double w = 1]) =>
-        OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: col, width: w));
+        OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: col, width: w));
     return TextFormField(
       controller: controller,
       obscureText: obscure,
@@ -298,23 +302,25 @@ class ChipBar<T> extends StatelessWidget {
             padding: const EdgeInsets.only(right: 10),
             child: Builder(builder: (_) {
               final on = it == selected;
-              return DecoratedBox(
-                decoration: BoxDecoration(
-                  color: on ? c.accent : c.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow:
-                      on ? [BoxShadow(color: c.accent.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 5))] : c.raised(1),
-                ),
-                child: Material(
-                  color: Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(14),
-                    onTap: () => onChanged(it),
-                    child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                        child: Text(labelOf(it),
-                            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: on ? c.onAccent : c.text))),
+              return Semantics(
+                button: true,
+                selected: on,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: on ? c.accent : c.inset,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(20),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(20),
+                      onTap: () => onChanged(it),
+                      child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                          child: Text(labelOf(it),
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: on ? c.onAccent : c.text))),
+                    ),
                   ),
                 ),
               );
@@ -328,7 +334,7 @@ class ChipBar<T> extends StatelessWidget {
 // ------------------------------------------------------------------ display bits
 
 class SectionTitle extends StatelessWidget {
-  const SectionTitle(this.text, {super.key, this.trailing, this.padding = const EdgeInsets.fromLTRB(4, 18, 4, 10)});
+  const SectionTitle(this.text, {super.key, this.trailing, this.padding = const EdgeInsets.fromLTRB(4, 20, 0, 6)});
   final String text;
   final Widget? trailing;
   final EdgeInsetsGeometry padding;
@@ -339,7 +345,7 @@ class SectionTitle extends StatelessWidget {
     return Padding(
       padding: padding,
       child: Row(children: [
-        Expanded(child: Text(text.toUpperCase(), style: c.eyebrow)),
+        Expanded(child: Text(text, style: c.h2)),
         if (trailing != null) trailing!,
       ]),
     );
@@ -367,11 +373,14 @@ class InfoRow extends StatelessWidget {
 }
 
 class Avatar extends StatelessWidget {
-  const Avatar({super.key, required this.name, this.url, this.size = 46, this.onTap});
+  const Avatar({super.key, required this.name, this.url, this.size = 46, this.onTap, this.ring = false});
   final String name;
   final String? url;
   final double size;
   final VoidCallback? onTap;
+
+  /// Draw the colourful story ring around the picture.
+  final bool ring;
 
   String get _initials {
     final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
@@ -383,25 +392,26 @@ class Avatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-    final fallback = Center(child: Text(_initials, style: TextStyle(color: c.accent, fontWeight: FontWeight.w800, fontSize: size * 0.36)));
+    final fallback = Center(child: Text(_initials, style: TextStyle(color: c.accent, fontWeight: FontWeight.w800, fontSize: size * 0.34)));
     final hasUrl = url != null && url!.isNotEmpty;
-    final circle = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(color: c.accentSoft, shape: BoxShape.circle, boxShadow: c.raised(1)),
-      child: ClipOval(
-        child: hasUrl
-            ? Image.network(url!,
-                fit: BoxFit.cover,
-                width: size,
-                height: size,
-                errorBuilder: (_, __, ___) => fallback,
-                loadingBuilder: (_, child, p) => p == null ? child : fallback)
-            : fallback,
-      ),
+    final px = (size * MediaQuery.devicePixelRatioOf(context)).round().clamp(48, 800);
+    final pic = ColoredBox(
+      color: c.accentSoft,
+      child: hasUrl
+          ? Image.network(url!,
+              fit: BoxFit.cover,
+              cacheWidth: px,
+              errorBuilder: (_, __, ___) => fallback,
+              loadingBuilder: (_, child, p) => p == null ? child : fallback)
+          : fallback,
     );
-    if (onTap == null) return circle;
-    return GestureDetector(onTap: onTap, child: circle);
+    final Widget circle = ring ? GradientRing(size: size, thickness: size > 60 ? 3 : 2, gap: size > 60 ? 3 : 2, child: pic) : SizedBox(width: size, height: size, child: ClipOval(child: pic));
+    return Semantics(
+      label: name,
+      image: true,
+      button: onTap != null,
+      child: onTap == null ? circle : GestureDetector(behavior: HitTestBehavior.opaque, onTap: onTap, child: circle),
+    );
   }
 }
 
@@ -422,7 +432,7 @@ class ProgressRing extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _RingPainter(percent.clamp(0, 100) / 100, col, c.inset),
+        painter: _RingPainter(percent.clamp(0, 100) / 100, col, c.edge),
         child: Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
             Text(label, style: TextStyle(fontSize: size * 0.2, fontWeight: FontWeight.w800, color: c.text)),
@@ -442,7 +452,7 @@ class _RingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final stroke = size.width * 0.11;
+    final stroke = size.width * 0.09;
     final rect = Offset(stroke / 2, stroke / 2) & Size(size.width - stroke, size.height - stroke);
     final trackPaint = Paint()
       ..style = PaintingStyle.stroke
@@ -473,6 +483,9 @@ class NetImage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    final mq = MediaQuery.of(context);
+    final target = ((width != null && width!.isFinite) ? width! : mq.size.width) * mq.devicePixelRatio;
+    final px = target.round().clamp(64, 1400);
     final placeholder = Container(height: height, width: width, color: c.inset, child: Icon(Icons.image_outlined, color: c.muted));
     if (url == null || url!.isEmpty) return ClipRRect(borderRadius: BorderRadius.circular(radius), child: placeholder);
     return ClipRRect(
@@ -482,6 +495,7 @@ class NetImage extends StatelessWidget {
         fit: fit,
         height: height,
         width: width,
+        cacheWidth: px,
         errorBuilder: (_, __, ___) => placeholder,
         loadingBuilder: (_, child, p) => p == null ? child : placeholder,
       ),
@@ -528,10 +542,11 @@ class ScreenScaffold extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: c.bg,
         foregroundColor: c.text,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        title: Text(title, style: c.h1),
+        title: Text(title, style: c.h1, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: actions,
         bottom: bottom,
       ),

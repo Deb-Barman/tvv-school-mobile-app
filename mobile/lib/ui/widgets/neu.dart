@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
 
-/// Raised (or inset) soft surface - the building block of the whole UI.
+/// The building block of the whole UI: a flat surface with a hairline border and rounded corners
+/// (names kept from the old design so every screen picks up the new look automatically).
+/// [inset] = the grey "filled" look used for fields and quiet rows.
 class NeuCard extends StatelessWidget {
   const NeuCard({
     super.key,
     required this.child,
     this.padding = const EdgeInsets.all(16),
     this.margin = EdgeInsets.zero,
-    this.radius = 20,
+    this.radius = 16,
     this.onTap,
     this.onLongPress,
     this.inset = false,
@@ -30,25 +32,25 @@ class NeuCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
-    final shape = BorderRadius.circular(radius);
+    final shape = BorderRadius.circular(radius > 18 ? 18 : radius);
+    Widget body = Padding(padding: padding, child: child);
+    if (onTap != null || onLongPress != null) {
+      body = InkWell(borderRadius: shape, onTap: onTap, onLongPress: onLongPress, child: body);
+    }
     return Padding(
       padding: margin,
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: color ?? (inset ? c.inset : c.surface),
           borderRadius: shape,
-          border: inset ? Border.all(color: c.edge) : null,
+          border: Border.all(color: c.edge),
           boxShadow: inset ? null : c.raised(depth),
         ),
         child: Material(
           color: Colors.transparent,
+          clipBehavior: Clip.antiAlias,
           borderRadius: shape,
-          child: InkWell(
-            borderRadius: shape,
-            onTap: onTap,
-            onLongPress: onLongPress,
-            child: Padding(padding: padding, child: child),
-          ),
+          child: onTap != null ? Semantics(button: true, child: body) : body,
         ),
       ),
     );
@@ -81,19 +83,13 @@ class NeuButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final enabled = onPressed != null && !busy;
-    final Color fg = secondary ? (danger ? c.bad : c.accent) : (danger ? Colors.white : c.onAccent);
-    final Color? bg = secondary ? null : (danger ? c.bad : c.accent);
-    final radius = BorderRadius.circular(compact ? 12 : 16);
+    final Color fg = secondary ? (danger ? c.bad : c.text) : (danger ? Colors.white : c.onAccent);
+    final Color bg = secondary ? c.inset : (danger ? c.bad : c.accent);
+    final radius = BorderRadius.circular(compact ? 10 : 12);
     return Opacity(
-      opacity: enabled || busy ? 1 : 0.55,
+      opacity: enabled || busy ? 1 : 0.5,
       child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: bg ?? c.surface,
-          borderRadius: radius,
-          boxShadow: secondary
-              ? c.raised(1)
-              : [BoxShadow(color: (bg ?? c.accent).withValues(alpha: 0.35), blurRadius: 14, offset: const Offset(0, 6))],
-        ),
+        decoration: BoxDecoration(color: bg, borderRadius: radius),
         child: Material(
           color: Colors.transparent,
           borderRadius: radius,
@@ -101,7 +97,7 @@ class NeuButton extends StatelessWidget {
             borderRadius: radius,
             onTap: enabled ? onPressed : null,
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20, vertical: compact ? 10 : 15),
+              padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20, vertical: compact ? 10 : 14),
               child: Row(
                 mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -125,7 +121,7 @@ class NeuButton extends StatelessWidget {
   }
 }
 
-/// Round icon button on a raised surface.
+/// Round icon button.
 class NeuIconButton extends StatelessWidget {
   const NeuIconButton({super.key, required this.icon, required this.onPressed, this.tooltip, this.size = 44, this.color});
 
@@ -139,7 +135,7 @@ class NeuIconButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final btn = DecoratedBox(
-      decoration: BoxDecoration(color: c.surface, shape: BoxShape.circle, boxShadow: c.raised(1)),
+      decoration: BoxDecoration(color: c.inset, shape: BoxShape.circle),
       child: Material(
         color: Colors.transparent,
         shape: const CircleBorder(),
@@ -168,7 +164,7 @@ class Pill extends StatelessWidget {
     final col = c.tone(tone);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: col.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(color: col.withValues(alpha: 0.13), borderRadius: BorderRadius.circular(20)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         if (icon != null) ...[Icon(icon, size: 13, color: col), const SizedBox(width: 4)],
         Flexible(
