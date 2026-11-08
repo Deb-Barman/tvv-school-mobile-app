@@ -29,7 +29,7 @@ class TimetableView extends StatelessWidget {
     final me = context.me;
     return AsyncPage<_Base>(
       refreshable: false, // the body below has its own AsyncPage
-      skeleton: const DashboardSkeleton(),
+      skeleton: const TimetableSkeleton(),
       load: () async {
         if (me.isStudent) return _Base(years: await svc.academics.myClassYears());
         final (classes, teachers) =
@@ -84,40 +84,31 @@ class _TimetableBodyState extends State<_TimetableBody> {
     return Column(children: [
       Padding(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-        child: Row(children: [
+        child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
           if (_u.isStudent && widget.base.years.length > 1)
-            Expanded(
-              child: PickerField(
-                label: 'Class year',
-                value: _title,
-                onTap: () async {
-                  final y = await pickOne<ClassYear>(context,
-                      title: 'Class year',
-                      options: widget.base.years,
-                      labelOf: (y) => y.title,
-                      selected: widget.base.years.where((y) => y.id == _yearId).firstOrNull);
-                  if (y != null) setState(() => _yearId = y.current ? null : y.id);
-                },
-              ),
+            PickerField(
+              label: 'Class year',
+              value: _title,
+              onTap: () async {
+                final y = await pickOne<ClassYear>(context,
+                    title: 'Class year',
+                    options: widget.base.years,
+                    labelOf: (y) => y.title,
+                    selected: widget.base.years.where((y) => y.id == _yearId).firstOrNull);
+                if (y != null) setState(() => _yearId = y.current ? null : y.id);
+              },
             ),
           if (!_u.isStudent) ...[
             if (_u.isTeacher)
-              // A horizontally scrolling bar needs a bounded width when it sits in a Row: share the line, never overflow.
-              Flexible(
-                child: Padding(
-                  padding: const EdgeInsets.only(right: 10),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 218),
-                    child: ChipBar<bool>(
-                        items: const [true, false],
-                        selected: _mine,
-                        labelOf: (v) => v ? 'My periods' : 'By class',
-                        onChanged: (v) => setState(() => _mine = v),
-                        padding: EdgeInsets.zero)),
-                ),
-              ),
+              SegmentStrip<bool>(
+                  padding: EdgeInsets.zero,
+                  items: const [true, false],
+                  selected: _mine,
+                  labelOf: (v) => v ? 'My periods' : 'By class',
+                  onChanged: (v) => setState(() => _mine = v)),
             if (!_mine)
-              Expanded(
+              Padding(
+                padding: EdgeInsets.only(top: _u.isTeacher ? 10 : 0),
                 child: PickerField(
                   label: 'Class',
                   value: widget.base.classes.where((x) => x.id == _classId).firstOrNull?.label,
@@ -135,8 +126,7 @@ class _TimetableBodyState extends State<_TimetableBody> {
           ],
         ]),
       ),
-      ChipBar<int>(
-          items: const [0, 1, 2, 3, 4, 5], selected: _day, labelOf: (d) => weekdayShort[d], onChanged: (d) => setState(() => _day = d)),
+      SegmentStrip<int>(items: const [0, 1, 2, 3, 4, 5], selected: _day, labelOf: (d) => weekdayShort[d], onChanged: (d) => setState(() => _day = d)),
       Expanded(
         child: (!_u.isStudent && !_mine && _classId == null)
             ? const EmptyState(
