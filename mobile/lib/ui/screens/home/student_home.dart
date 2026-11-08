@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/clock.dart';
 import '../../../data/attendance_stats.dart';
 import '../../../data/models/academics.dart';
 import '../../../data/models/content.dart';
@@ -7,6 +8,7 @@ import '../../../state/app_scope.dart';
 import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
+import '../../widgets/insta.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
 import 'dashboard_parts.dart';
@@ -63,11 +65,11 @@ class StudentHomeView extends StatelessWidget {
       },
       builder: (ctx, d, reload) {
         final c = AppColors.of(ctx);
+        final now = schoolNow();
         final s = AttendanceSummary.of(d.attendance, workingDays: d.session?.workingDays, minPercent: d.session?.minPercent ?? 75);
-        final wd = DateTime.now().weekday - 1; // 0 = Monday
+        final wd = now.weekday - 1; // 0 = Monday
         final today = d.timetable.where((e) => e.weekday == wd).toList()..sort((a, b) => a.period.compareTo(b.period));
-        final nowT = TimeOfDay.now();
-        final nowMin = nowT.hour * 60 + nowT.minute;
+        final nowMin = now.hour * 60 + now.minute;
         int toMin(String t) {
           final p = t.split(':');
           return (int.tryParse(p[0]) ?? 0) * 60 + (p.length > 1 ? int.tryParse(p[1]) ?? 0 : 0);
@@ -75,54 +77,60 @@ class StudentHomeView extends StatelessWidget {
 
         final todo = d.homework.where((h) => h.phase == 'open' && h.done != true).toList()
           ..sort((a, b) => (a.dueDate ?? DateTime(2100)).compareTo(b.dueDate ?? DateTime(2100)));
-        final exams = d.exams.where((e) => e.date != null && !e.date!.isBefore(dayOnly(DateTime.now()))).toList()
+        final exams = d.exams.where((e) => e.date != null && !e.date!.isBefore(dayOnly(now))).toList()
           ..sort((a, b) => a.date!.compareTo(b.date!));
 
-        return PageList(children: [
-          NeuCard(
-            depth: 3,
-            radius: 26,
-            padding: const EdgeInsets.all(20),
+        return PageList(padding: const EdgeInsets.fromLTRB(12, 0, 12, 40), children: [
+          StoryRow(bubbles: [
+            StoryBubble(icon: Icons.calendar_view_week_outlined, label: 'Timetable', onTap: () => onOpen('timetable')),
+            StoryBubble(icon: Icons.assignment_outlined, label: 'Homework', badge: todo.length, onTap: () => onOpen('homework')),
+            StoryBubble(icon: Icons.fact_check_outlined, label: 'Attendance', onTap: () => onOpen('attendance')),
+            StoryBubble(icon: Icons.emoji_events_outlined, label: 'Results', onTap: () => onOpen('results')),
+            StoryBubble(icon: Icons.quiz_outlined, label: 'Exams', onTap: () => onOpen('exams')),
+            StoryBubble(icon: Icons.campaign_outlined, label: 'Notices', onTap: () => onOpen('notices')),
+            StoryBubble(icon: Icons.event_outlined, label: 'Events', onTap: () => onOpen('events')),
+            StoryBubble(icon: Icons.photo_library_outlined, label: 'Gallery', onTap: () => onOpen('gallery')),
+          ]),
+          GreetingHeader(name: me.firstName, chips: [if (d.classLabel != null) Pill(d.classLabel!, tone: 'good')]),
+          const SizedBox(height: 8),
+          PostCard(
+            title: 'Attendance',
+            subtitle: s.countLabel,
+            leading: const IconBadge(Icons.fact_check_rounded, tone: 'good'),
+            onTap: () => onOpen('attendance'),
             child: Row(children: [
+              ProgressRing(percent: s.ringPercent, label: s.ringLabel, sub: 'attendance', tone: s.tone, size: 96),
+              const SizedBox(width: 18),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(greeting().toUpperCase(), style: c.eyebrow),
-                  const SizedBox(height: 4),
-                  Text(me.firstName, style: c.display),
+                  if (s.percentOfMarked != null) Pill('${pct(s.percentOfMarked)} so far', tone: s.tone),
                   const SizedBox(height: 8),
-                  if (d.classLabel != null) Pill(d.classLabel!, tone: 'good'),
-                  const SizedBox(height: 12),
-                  Text('Attendance ${s.countLabel}', style: c.small),
-                  if (s.percentOfMarked != null)
-                    Padding(padding: const EdgeInsets.only(top: 6), child: Pill('${pct(s.percentOfMarked)} so far', tone: s.tone)),
+                  Text('Tap to see your calendar and recent days.', style: c.small),
                 ]),
               ),
-              GestureDetector(
-                  onTap: () => onOpen('attendance'),
-                  child: ProgressRing(percent: s.ringPercent, label: s.ringLabel, sub: 'attendance', tone: s.tone, size: 104)),
             ]),
           ),
           SectionTitle("Today's classes", trailing: TextButton(onPressed: () => onOpen('timetable'), child: const Text('Timetable'))),
           if (wd > 5)
-            const NeuCard(child: Text('It\u2019s Sunday \u2014 no classes today. Enjoy your day!'))
+            const NeuCard(inset: true, child: Text('It\u2019s Sunday \u2014 no classes today. Enjoy your day!'))
           else if (today.isEmpty)
-            const NeuCard(child: Text('No periods are scheduled for today.'))
+            const NeuCard(inset: true, child: Text('No periods are scheduled for today.'))
           else
             for (final e in today)
               Builder(builder: (_) {
                 final live = !e.isBreak && nowMin >= toMin(e.startTime) && nowMin < toMin(e.endTime);
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: NeuCard(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                    radius: 18,
+                    radius: 14,
                     color: live ? c.accentSoft : null,
                     child: Row(children: [
                       SizedBox(
-                          width: 70,
+                          width: 78,
                           child: Text(fmtTime(e.startTime), style: c.small.copyWith(color: c.text, fontWeight: FontWeight.w600))),
                       Expanded(child: Text(e.title, style: e.isBreak ? c.small.copyWith(fontSize: 14) : c.bodyStrong)),
-                      if (e.room.isNotEmpty) Text('Rm ${e.room}', style: c.small),
+                      if (e.room.isNotEmpty) Padding(padding: const EdgeInsets.only(left: 6), child: Text('Rm ${e.room}', style: c.small)),
                       if (live) ...[const SizedBox(width: 8), const Pill('Now', tone: 'good')],
                     ]),
                   ),
@@ -130,27 +138,28 @@ class StudentHomeView extends StatelessWidget {
               }),
           SectionTitle('Homework to do', trailing: TextButton(onPressed: () => onOpen('homework'), child: const Text('All homework'))),
           if (todo.isEmpty)
-            const NeuCard(
+            NeuCard(
+                inset: true,
                 child: Row(children: [
-              Icon(Icons.task_alt_rounded),
-              SizedBox(width: 12),
-              Expanded(child: Text('Nothing pending \u2014 you\u2019re all caught up.'))
-            ]))
+                  Icon(Icons.task_alt_rounded, color: c.good),
+                  const SizedBox(width: 12),
+                  const Expanded(child: Text('Nothing pending \u2014 you\u2019re all caught up.'))
+                ]))
           else
             for (final h in todo.take(3))
               Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: NeuCard(
                   onTap: () => onOpen('homework'),
                   padding: const EdgeInsets.all(14),
-                  radius: 18,
+                  radius: 14,
                   child: Row(children: [
                     Expanded(
                         child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [Text(h.title, style: c.bodyStrong), Text(h.subjectName, style: c.small)])),
-                    Pill(relativeDay(h.dueDate),
-                        tone: (h.dueDate != null && dayOnly(h.dueDate!).difference(dayOnly(DateTime.now())).inDays <= 1) ? 'bad' : 'warn'),
+                    const SizedBox(width: 8),
+                    Pill(relativeDay(h.dueDate), tone: (h.dueDate != null && dayOnly(h.dueDate!).difference(dayOnly(now)).inDays <= 1) ? 'bad' : 'warn'),
                   ]),
                 ),
               ),
@@ -158,37 +167,36 @@ class StudentHomeView extends StatelessWidget {
             SectionTitle('Upcoming exams', trailing: TextButton(onPressed: () => onOpen('exams'), child: const Text('Schedule'))),
             for (final e in exams.take(3))
               Padding(
-                padding: const EdgeInsets.only(bottom: 10),
+                padding: const EdgeInsets.only(bottom: 8),
                 child: NeuCard(
                   onTap: () => onOpen('exams'),
                   padding: const EdgeInsets.all(14),
-                  radius: 18,
+                  radius: 14,
                   child: Row(children: [
                     Expanded(
                         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(e.subjectName, style: c.bodyStrong),
                       Text('${e.name} \u00b7 ${fmtDate(e.date)}', style: c.small)
                     ])),
+                    const SizedBox(width: 8),
                     Pill(relativeDay(e.date), tone: 'good'),
                   ]),
                 ),
               ),
           ],
           SectionTitle('Latest notices', trailing: TextButton(onPressed: () => onOpen('notices'), child: const Text('All notices'))),
-          if (d.notices.isEmpty) const NeuCard(child: Text('No notices right now.')),
+          if (d.notices.isEmpty) const NeuCard(inset: true, child: Text('No notices right now.')),
           for (final n in d.notices.take(3))
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: NeuCard(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: PostCard(
+                title: n.createdByName.isNotEmpty ? n.createdByName : 'School office',
+                subtitle: fmtDate(n.createdAt),
                 onTap: () => onOpen('notices'),
-                padding: const EdgeInsets.all(14),
-                radius: 18,
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(n.title, style: c.bodyStrong),
-                  const SizedBox(height: 2),
-                  Text(n.body, maxLines: 2, overflow: TextOverflow.ellipsis, style: c.small.copyWith(fontSize: 13.5)),
-                  const SizedBox(height: 6),
-                  Text(fmtDate(n.createdAt), style: c.small),
+                  Text(n.title, style: c.h2),
+                  const SizedBox(height: 4),
+                  Text(n.body, maxLines: 3, overflow: TextOverflow.ellipsis, style: c.body),
                 ]),
               ),
             ),

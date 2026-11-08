@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/config.dart';
 import '../../../state/app_scope.dart';
 import '../../features.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
-import '../../widgets/neu.dart';
+import '../../widgets/insta.dart';
 
-/// Role-based home: bottom navigation (4 main sections + More), lazy tabs, hardware-back returns to the first tab.
+/// Role-based home: Instagram-style bottom bar (4 main sections + your picture), lazy tabs, back returns to the first tab.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -49,8 +50,9 @@ class _HomeShellState extends State<HomeShell> {
     final c = AppColors.of(context);
     final me = context.me;
     final moreIndex = _nav.tabs.length;
-    final titles = [..._nav.tabs.map((f) => f.title), 'More'];
-    final profile = _nav.find('profile') ?? _nav.find('settings');
+    final titles = [..._nav.tabs.map((f) => f.title), 'Menu'];
+    final notices = _nav.find('notices');
+    final offline = context.svc.offlineData;
 
     return PopScope(
       canPop: _index == 0,
@@ -62,33 +64,64 @@ class _HomeShellState extends State<HomeShell> {
         appBar: AppBar(
           backgroundColor: c.bg,
           foregroundColor: c.text,
+          surfaceTintColor: Colors.transparent,
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: false,
-          title: Text(titles[_index], style: c.h1),
+          titleSpacing: 16,
+          title: _index == 0
+              ? Row(children: [
+                  const SchoolLogo(size: 34),
+                  const SizedBox(width: 10),
+                  Flexible(child: Text('TVV School', maxLines: 1, overflow: TextOverflow.ellipsis, style: c.h1.copyWith(fontSize: 22))),
+                ])
+              : Text(titles[_index], maxLines: 1, overflow: TextOverflow.ellipsis, style: c.h1),
           actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: 14),
-              child: Avatar(name: me.fullName, size: 38, onTap: profile == null ? null : () => pushFeature(context, profile)),
-            ),
+            if (notices != null)
+              IconButton(
+                tooltip: 'Notices',
+                icon: Icon(Icons.campaign_outlined, color: c.text, size: 26),
+                onPressed: () => pushFeature(context, notices),
+              ),
+            const SizedBox(width: 4),
           ],
         ),
         body: SafeArea(
           top: false,
-          child: IndexedStack(
-            index: _index,
-            children: [
-              for (var i = 0; i < _nav.tabs.length; i++) _visited.contains(i) ? _nav.tabs[i].builder(context) : const SizedBox.shrink(),
-              _visited.contains(moreIndex) ? MoreView(nav: _nav, open: _open) : const SizedBox.shrink(),
-            ],
-          ),
+          child: Column(children: [
+            ValueListenableBuilder<bool>(
+              valueListenable: offline,
+              builder: (_, isOffline, __) => AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                child: isOffline
+                    ? Container(
+                        width: double.infinity,
+                        color: c.warn.withValues(alpha: 0.16),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                        child: Row(children: [
+                          Icon(Icons.cloud_off_rounded, size: 16, color: c.warn),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text('You are offline \u2014 showing your last saved data.', style: TextStyle(fontSize: 12.5, color: c.text))),
+                        ]),
+                      )
+                    : const SizedBox(width: double.infinity),
+              ),
+            ),
+            Expanded(
+              child: IndexedStack(
+                index: _index,
+                children: [
+                  for (var i = 0; i < _nav.tabs.length; i++) _visited.contains(i) ? _nav.tabs[i].builder(context) : const SizedBox.shrink(),
+                  _visited.contains(moreIndex) ? MoreView(nav: _nav, open: _open) : const SizedBox.shrink(),
+                ],
+              ),
+            ),
+          ]),
         ),
         bottomNavigationBar: _BottomBar(
           index: _index,
-          items: [
-            for (final f in _nav.tabs) (f.icon, f.title),
-            (Icons.grid_view_rounded, 'More'),
-          ],
+          tabs: _nav.tabs,
+          meName: me.fullName,
           onTap: (i) => setState(() {
             _index = i;
             _visited.add(i);
@@ -103,60 +136,44 @@ void pushFeature(BuildContext context, Feature f) {
   Navigator.of(context).push(MaterialPageRoute<void>(builder: (ctx) => ScreenScaffold(title: f.title, body: f.builder(ctx))));
 }
 
+/// Icons only, hairline on top, filled icon for the selected tab, your own picture as the last tab.
 class _BottomBar extends StatelessWidget {
-  const _BottomBar({required this.index, required this.items, required this.onTap});
+  const _BottomBar({required this.index, required this.tabs, required this.meName, required this.onTap});
   final int index;
-  final List<(IconData, String)> items;
+  final List<Feature> tabs;
+  final String meName;
   final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
+    Widget cell(int i, String label, Widget icon) => Expanded(
+          child: Semantics(
+            button: true,
+            selected: i == index,
+            label: label,
+            child: InkResponse(
+              onTap: () => onTap(i),
+              radius: 32,
+              child: SizedBox(height: 52, child: Center(child: ExcludeSemantics(child: icon))),
+            ),
+          ),
+        );
     return DecoratedBox(
-      decoration: BoxDecoration(
-          color: c.surface,
-          boxShadow: [BoxShadow(color: c.shadowDark.withValues(alpha: 0.5), blurRadius: 18, offset: const Offset(0, -4))]),
+      decoration: BoxDecoration(color: c.bg, border: Border(top: BorderSide(color: c.edge))),
       child: SafeArea(
         top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 8),
-          child: Row(children: [
-            for (var i = 0; i < items.length; i++)
-              Expanded(
-                child: Semantics(
-                  button: true,
-                  selected: i == index,
-                  label: items[i].$2,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () => onTap(i),
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 180),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration:
-                          BoxDecoration(color: i == index ? c.accentSoft : Colors.transparent, borderRadius: BorderRadius.circular(18)),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(items[i].$1, size: 23, color: i == index ? c.accent : c.muted),
-                        const SizedBox(height: 3),
-                        Text(items[i].$2,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                                fontSize: 10.5,
-                                fontWeight: i == index ? FontWeight.w800 : FontWeight.w600,
-                                color: i == index ? c.accent : c.muted)),
-                      ]),
-                    ),
-                  ),
-                ),
-              ),
-          ]),
-        ),
+        child: Row(children: [
+          for (var i = 0; i < tabs.length; i++)
+            cell(i, tabs[i].title, Icon(i == index ? (tabs[i].activeIcon ?? tabs[i].icon) : tabs[i].icon, size: 27, color: i == index ? c.text : c.muted)),
+          cell(tabs.length, 'Menu', Avatar(name: meName, size: 30, ring: tabs.length == index)),
+        ]),
       ),
     );
   }
 }
 
+/// The last tab: your picture and name, then every other section as a clean list.
 class MoreView extends StatelessWidget {
   const MoreView({super.key, required this.nav, required this.open});
   final AppNav nav;
@@ -166,46 +183,44 @@ class MoreView extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final me = context.me;
-    return PageList(children: [
-      NeuCard(
+    return PageList(padding: const EdgeInsets.fromLTRB(0, 8, 0, 40), children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
         child: Row(children: [
-          Avatar(name: me.fullName, size: 52),
-          const SizedBox(width: 14),
+          Avatar(name: me.fullName, size: 84, ring: true),
+          const SizedBox(width: 18),
           Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [Text(me.fullName, style: c.h2), Text('${me.role.label} \u00b7 @${me.username}', style: c.small)])),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(me.fullName, maxLines: 2, overflow: TextOverflow.ellipsis, style: c.h1),
+              const SizedBox(height: 2),
+              Text('@${me.username}', maxLines: 1, overflow: TextOverflow.ellipsis, style: c.small),
+              const SizedBox(height: 8),
+              Text('${me.role.label} \u00b7 ${AppConfig.schoolName}', maxLines: 2, overflow: TextOverflow.ellipsis, style: c.small.copyWith(color: c.text)),
+            ]),
+          ),
         ]),
       ),
-      const SizedBox(height: 14),
-      GridView.count(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        crossAxisCount: 2,
-        mainAxisSpacing: 12,
-        crossAxisSpacing: 12,
-        childAspectRatio: 1.2,
-        children: [
-          for (final f in nav.more)
-            NeuCard(
-              onTap: () => open(f.key),
-              padding: const EdgeInsets.all(14),
-              radius: 20,
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(color: c.accentSoft, borderRadius: BorderRadius.circular(12)),
-                    child: Icon(f.icon, color: c.accent, size: 21)),
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(f.title, style: c.bodyStrong, maxLines: 1, overflow: TextOverflow.ellipsis),
-                  if (f.subtitle.isNotEmpty)
-                    Text(f.subtitle, style: c.small.copyWith(fontSize: 11.5), maxLines: 1, overflow: TextOverflow.ellipsis),
+      const Hairline(),
+      for (final f in nav.more) ...[
+        InkWell(
+          onTap: () => open(f.key),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+            child: Row(children: [
+              Icon(f.icon, color: c.text, size: 26),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(f.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: c.bodyStrong.copyWith(fontSize: 15.5)),
+                  if (f.subtitle.isNotEmpty) Text(f.subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: c.small),
                 ]),
-              ]),
-            ),
-        ],
-      ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: c.muted),
+            ]),
+          ),
+        ),
+        const Hairline(indent: 62),
+      ],
     ]);
   }
 }
