@@ -4,7 +4,7 @@ The official app of **Tufanganj Vivekananda Vidyalaya (H.S.)** for Android and i
 It talks to the school's **existing** Django REST API (the same one the website uses). Nothing in the backend, the
 Supabase database or the website is replaced or duplicated.
 
-* Setup, cloud builds, building and installing the APK: [`../docs/MOBILE_SETUP.md`](../docs/MOBILE_SETUP.md)
+* Setup, cloud builds, testing, building and installing the APK: [`../docs/MOBILE_SETUP.md`](../docs/MOBILE_SETUP.md)
 * API map, what was verified, known gaps: [`../docs/MOBILE_API_NOTES.md`](../docs/MOBILE_API_NOTES.md)
 
 ## What each role gets
