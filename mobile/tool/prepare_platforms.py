@@ -101,6 +101,11 @@ SIGNING_BLOCK = '''    signingConfigs {
 
 def patch_gradle(path: Path) -> None:
     s = path.read_text(encoding="utf-8")
+    # flutter_secure_storage (encrypted preferences) needs Android 6.0 (API 23) or newer.
+    s2 = re.sub(r"minSdk\s*=\s*flutter\.minSdkVersion", "minSdk = maxOf(23, flutter.minSdkVersion)", s)
+    if s2 != s:
+        s = s2
+        path.write_text(s, encoding="utf-8")
     if "keystoreProperties" in s:
         return  # already patched
     if path.suffix != ".kts":
