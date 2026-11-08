@@ -8,6 +8,7 @@ import '../theme/tokens.dart';
 import '../../core/clock.dart';
 import 'insta.dart';
 import 'neu.dart';
+import 'photo_viewer.dart';
 
 // ------------------------------------------------------------------ feedback
 
@@ -331,6 +332,51 @@ class ChipBar<T> extends StatelessWidget {
   }
 }
 
+/// Equal-width choice strip (for a handful of options, like the days of the week): always fits the screen.
+class SegmentStrip<T> extends StatelessWidget {
+  const SegmentStrip(
+      {super.key, required this.items, required this.selected, required this.labelOf, required this.onChanged, this.padding = const EdgeInsets.fromLTRB(16, 8, 16, 8)});
+  final List<T> items;
+  final T selected;
+  final String Function(T) labelOf;
+  final ValueChanged<T> onChanged;
+  final EdgeInsetsGeometry padding;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    return Padding(
+      padding: padding,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(color: c.inset, borderRadius: BorderRadius.circular(14)),
+        child: Row(children: [
+          for (final it in items)
+            Expanded(
+              child: Semantics(
+                button: true,
+                selected: it == selected,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => onChanged(it),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    padding: const EdgeInsets.symmetric(vertical: 9),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(color: it == selected ? c.accent : Colors.transparent, borderRadius: BorderRadius.circular(11)),
+                    child: Text(labelOf(it),
+                        maxLines: 1,
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: it == selected ? c.onAccent : c.muted)),
+                  ),
+                ),
+              ),
+            ),
+        ]),
+      ),
+    );
+  }
+}
+
 // ------------------------------------------------------------------ display bits
 
 class SectionTitle extends StatelessWidget {
@@ -503,25 +549,10 @@ class NetImage extends StatelessWidget {
   }
 }
 
-/// Full-screen, pinch-to-zoom picture viewer.
-void showFullImage(BuildContext context, String? url, {String? title}) {
+/// Full-screen, pinch-to-zoom picture viewer (for one picture; the gallery opens all its pictures in the same viewer).
+void showFullImage(BuildContext context, String? url, {String? title, Object? heroTag}) {
   if (url == null || url.isEmpty) return;
-  Navigator.of(context).push(MaterialPageRoute<void>(
-    fullscreenDialog: true,
-    builder: (ctx) => Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-          backgroundColor: Colors.black, foregroundColor: Colors.white, title: Text(title ?? '', style: const TextStyle(fontSize: 16))),
-      body: Center(
-        child: InteractiveViewer(
-          minScale: 1,
-          maxScale: 5,
-          child: Image.network(url,
-              fit: BoxFit.contain, errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 64)),
-        ),
-      ),
-    ),
-  ));
+  openPhotoViewer(context, [ViewerPhoto(url, caption: title ?? '', heroTag: heroTag)]);
 }
 
 // ------------------------------------------------------------------ page scaffolding
@@ -563,7 +594,9 @@ class PageList extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   @override
-  Widget build(BuildContext context) => ListView(physics: const AlwaysScrollableScrollPhysics(), padding: padding, children: children);
+  Widget build(BuildContext context) => ListView(physics: const AlwaysScrollableScrollPhysics(), padding: padding, children: [
+        for (var i = 0; i < children.length; i++) i < 12 ? FadeSlideIn(index: i, child: children[i]) : children[i],
+      ]);
 }
 
 /// Runs a button action: shows a clear message on failure, optional success message. Returns true on success.

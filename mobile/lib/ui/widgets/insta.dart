@@ -131,7 +131,9 @@ class PostCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final c = AppColors.of(context);
     final shape = BorderRadius.circular(16);
-    return DecoratedBox(
+    return PressScale(
+      enabled: onTap != null,
+      child: DecoratedBox(
       decoration: BoxDecoration(color: c.surface, borderRadius: shape, border: Border.all(color: c.edge)),
       child: Material(
         color: Colors.transparent,
@@ -158,6 +160,7 @@ class PostCard extends StatelessWidget {
           ]),
         ),
       ),
+      ),
     );
   }
 }
@@ -172,4 +175,52 @@ class Hairline extends StatelessWidget {
         padding: EdgeInsets.only(left: indent),
         child: SizedBox(height: 1, child: ColoredBox(color: AppColors.of(context).edge, child: const SizedBox.expand())),
       );
+}
+
+/// Presses in slightly while a finger is down (does not take part in the tap itself).
+class PressScale extends StatefulWidget {
+  const PressScale({super.key, required this.child, this.enabled = true});
+  final Widget child;
+  final bool enabled;
+
+  @override
+  State<PressScale> createState() => _PressScaleState();
+}
+
+class _PressScaleState extends State<PressScale> {
+  bool _down = false;
+
+  void _set(bool v) {
+    if (_down != v && mounted) setState(() => _down = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled) return widget.child;
+    return Listener(
+      onPointerDown: (_) => _set(true),
+      onPointerUp: (_) => _set(false),
+      onPointerCancel: (_) => _set(false),
+      child: AnimatedScale(scale: _down ? 0.978 : 1, duration: const Duration(milliseconds: 110), curve: Curves.easeOut, child: widget.child),
+    );
+  }
+}
+
+/// Fades and slides a list item in the first time it appears (the first few items are staggered).
+class FadeSlideIn extends StatelessWidget {
+  const FadeSlideIn({super.key, required this.index, required this.child});
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final i = index > 7 ? 7 : index;
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: Duration(milliseconds: 300 + i * 70),
+      curve: Curves.easeOutCubic,
+      child: child,
+      builder: (_, v, c) => Opacity(opacity: v, child: Transform.translate(offset: Offset(0, (1 - v) * 18), child: c)),
+    );
+  }
 }

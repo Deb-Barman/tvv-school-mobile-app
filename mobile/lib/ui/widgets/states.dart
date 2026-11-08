@@ -5,7 +5,9 @@ import '../theme/tokens.dart';
 import 'common.dart';
 import 'neu.dart';
 
-/// Gently pulses everything inside it (skeleton loading).
+export 'skeletons.dart';
+
+/// Skeleton loading: a soft light sweeps across every placeholder inside it (like YouTube / Facebook).
 class Pulse extends StatefulWidget {
   const Pulse({super.key, required this.child});
   final Widget child;
@@ -15,9 +17,7 @@ class Pulse extends StatefulWidget {
 }
 
 class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1100))
-    ..repeat(reverse: true);
-  late final Animation<double> _a = Tween<double>(begin: 0.45, end: 1).animate(CurvedAnimation(parent: _ctl, curve: Curves.easeInOut));
+  late final AnimationController _ctl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
 
   @override
   void dispose() {
@@ -26,7 +26,29 @@ class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
   }
 
   @override
-  Widget build(BuildContext context) => FadeTransition(opacity: _a, child: widget.child);
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final base = c.isDark ? const Color(0xFF1E1E24) : const Color(0xFFEAEAEF);
+    final glow = c.isDark ? const Color(0xFF34343D) : const Color(0xFFF8F8FB);
+    return AnimatedBuilder(
+      animation: _ctl,
+      child: widget.child,
+      builder: (context, child) {
+        final t = _ctl.value;
+        return ShaderMask(
+          blendMode: BlendMode.srcATop,
+          shaderCallback: (rect) => LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [base, glow, base],
+            stops: [(t - 0.3).clamp(0.0, 1.0), t, (t + 0.3).clamp(0.0, 1.0)],
+            tileMode: TileMode.clamp,
+          ).createShader(rect),
+          child: child,
+        );
+      },
+    );
+  }
 }
 
 class SkeletonBox extends StatelessWidget {
@@ -77,37 +99,6 @@ class ListSkeleton extends StatelessWidget {
                 ]),
               ),
             ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Placeholder shaped like the dashboards: a hero card, a row of tiles, then rows.
-class DashboardSkeleton extends StatelessWidget {
-  const DashboardSkeleton({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Pulse(
-      child: ListView(
-        physics: const NeverScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-        children: const [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            SkeletonBox(width: 62, height: 62, radius: 31),
-            SkeletonBox(width: 62, height: 62, radius: 31),
-            SkeletonBox(width: 62, height: 62, radius: 31),
-            SkeletonBox(width: 62, height: 62, radius: 31),
-          ]),
-          SizedBox(height: 18),
-          SkeletonBox(height: 140, radius: 16),
-          SizedBox(height: 16),
-          SkeletonBox(height: 64, radius: 14),
-          SizedBox(height: 12),
-          SkeletonBox(height: 64, radius: 14),
-          SizedBox(height: 12),
-          SkeletonBox(height: 64, radius: 14),
         ],
       ),
     );
