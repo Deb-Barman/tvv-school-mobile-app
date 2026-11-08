@@ -30,6 +30,17 @@ class AppServices {
   /// true while the screens are showing saved copies because the server could not be reached.
   final ValueNotifier<bool> offlineData = ValueNotifier<bool>(false);
 
+  /// The signed-in person's profile picture (a link), or null. Shown in the bottom bar, the menu and the dashboards.
+  final ValueNotifier<String?> myPhoto = ValueNotifier<String?>(null);
+
+  /// Loads the signed-in person's picture. Quietly does nothing when there is none (or no profile, e.g. Super Admin).
+  Future<void> refreshMyPhoto() async {
+    try {
+      final p = await profile.mine();
+      myPhoto.value = p.displayPhoto;
+    } catch (_) {}
+  }
+
   /// Wake the (free-tier) server while the sign-in screen is showing. Tests switch this off.
   final bool warmUpOnStart;
 
