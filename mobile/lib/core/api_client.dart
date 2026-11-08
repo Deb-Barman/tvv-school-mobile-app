@@ -4,9 +4,15 @@ import 'dart:io';
 
 import 'api_exception.dart';
 import 'json.dart';
+import 'response_cache.dart';
 import 'token_store.dart';
 
 enum _RefreshOutcome { ok, sessionOver, transient }
+
+class _Cached {
+  _Cached(this.value);
+  final Object? value;
+}
 
 class _Raw {
   _Raw(this.status, this.json);
@@ -31,6 +37,7 @@ class ApiClient {
     required String baseUrl,
     required this.tokens,
     this.onSessionExpired,
+    this.cache,
     HttpClient? httpClient,
     this.retryDelays = const [Duration(milliseconds: 1500), Duration(milliseconds: 3500), Duration(milliseconds: 7000)],
     this.getTimeout = const Duration(seconds: 25),
@@ -48,6 +55,20 @@ class ApiClient {
   /// Called once when the server says the sign-in is definitely over (expired / password changed / disabled).
   void Function()? onSessionExpired;
 
+  /// Last good answer of every GET. When the network is down (or the free server is asleep for too long) the saved
+  /// copy is returned instead of an error, and [onOfflineData] is told so the screen can say "showing saved data".
+  final ResponseCache? cache;
+
+  /// true = the last read came from the saved copy; false = it came live from the server.
+  void Function(bool offline)? onOfflineData;
+  bool _offline = false;
+
+  void _setOffline(bool v) {
+    if (_offline == v) return;
+    _offline = v;
+    onOfflineData?.call(v);
+  }
+
   String? _access;
   String? _refresh;
   bool _loaded = false;
@@ -56,7 +77,7 @@ class ApiClient {
   static HttpClient _defaultClient() {
     final c = HttpClient();
     c.connectionTimeout = const Duration(seconds: 20);
-    c.userAgent = 'TVV-Mobile/1.0';
+    c.userAgent = 'TVV-Mobile/1.1';
     return c;
   }
 
@@ -78,6 +99,7 @@ class ApiClient {
     _access = access;
     _refresh = refresh;
     _loaded = true;
+    await _wipeCache(); // a new sign-in always starts from an empty cache
     await tokens.save(access: access, refresh: refresh);
   }
 
@@ -85,6 +107,8 @@ class ApiClient {
     _access = null;
     _refresh = null;
     _loaded = true;
+    await _wipeCache(); // nobody else may see the previous person's saved data
+    _setOffline(false);
     await tokens.clear();
   }
 
@@ -164,14 +188,23 @@ class ApiClient {
     var refreshed = false;
     var attempt = 0;
 
+    // A saved copy (if any) lets a read give up sooner instead of making someone wait through every retry.
+    final cacheKey = (isGet && auth && cache != null) ? _cacheKey(path, query) : null;
+    final cached = cacheKey == null ? null : await _cacheRead(cacheKey);
+    final maxRetries = (cached != null && retryDelays.length > 1) ? 1 : retryDelays.length;
+
     while (true) {
       _Raw res;
       try {
         res = await _raw(method, path, query: query, body: body, token: auth ? _access : null, timeout: timeout);
-      } on ApiException {
-        if (canRetry && attempt < retryDelays.length) {
+      } on ApiException catch (e) {
+        if (canRetry && attempt < maxRetries) {
           await Future<void>.delayed(retryDelays[attempt++]);
           continue;
+        }
+        if (cached != null && e.isNetwork) {
+          _setOffline(true);
+          return cached.value;
         }
         rethrow;
       }
@@ -193,17 +226,58 @@ class ApiClient {
         throw ApiException.fromResponse(401, res.json);
       }
 
-      if (canRetry && (res.status == 502 || res.status == 503 || res.status == 504) && attempt < retryDelays.length) {
+      final waking = res.status == 502 || res.status == 503 || res.status == 504;
+      if (canRetry && waking && attempt < maxRetries) {
         await Future<void>.delayed(retryDelays[attempt++]);
         continue;
       }
+      if (cached != null && waking) {
+        _setOffline(true);
+        return cached.value;
+      }
 
-      if (res.status >= 200 && res.status < 300) return res.json;
+      if (res.status >= 200 && res.status < 300) {
+        if (isGet) {
+          _setOffline(false);
+          if (cacheKey != null) unawaited(_cacheWrite(cacheKey, res.json));
+        }
+        return res.json;
+      }
       throw ApiException.fromResponse(res.status, res.json);
     }
   }
 
   // ---------------------------------------------------------------- internals
+
+  String _cacheKey(String path, Map<String, Object?>? query) {
+    final u = _uri(path, query).toString();
+    return u.startsWith(baseUrl) ? u.substring(baseUrl.length) : u;
+  }
+
+  Future<_Cached?> _cacheRead(String key) async {
+    try {
+      final s = await cache!.read(key);
+      if (s == null) return null;
+      return _Cached(jsonDecode(s));
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _cacheWrite(String key, Object? json) async {
+    if (json == null) return;
+    try {
+      final s = jsonEncode(json);
+      if (s.length > 180000) return; // keep the phone's preferences file small
+      await cache!.write(key, s);
+    } catch (_) {}
+  }
+
+  Future<void> _wipeCache() async {
+    try {
+      await cache?.clear();
+    } catch (_) {}
+  }
 
   Future<_RefreshOutcome> _refreshTokens() {
     return _refreshInFlight ??= _doRefresh().whenComplete(() {
