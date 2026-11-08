@@ -1,30 +1,25 @@
-name: Mobile app - build (Android APK/AAB + iOS)
+name: Mobile app - build Android APK
 
-# Builds the Flutter app in /mobile in the cloud, so no laptop is needed.
-#   * Every push to main that touches /mobile : checks + Android APK and AAB.
-#   * Manually (Actions tab -> "Mobile app - build" -> Run workflow) : also iOS if you tick the box.
-#   * Pushing a tag like  mobile-v1.0.0  : everything, and the APK is attached to a GitHub Release.
-# Setup instructions: docs/MOBILE_SETUP.md
+# Builds ONLY the Android APK of the Flutter app in /mobile, in the cloud (no laptop needed).
+#   * Every push to main that touches /mobile : builds the APK.
+#   * Manually: Actions tab -> "Mobile app - build Android APK" -> Run workflow.
+#
+# WHERE TO DOWNLOAD (on your phone):
+#   1. Releases page of this repo -> the release called "mobile-latest" -> tap TVV-School.apk   (easiest)
+#   2. or the finished run's page -> Artifacts -> android-apk (a zip that contains the APK)
+#
+# Setup + install help: docs/MOBILE_SETUP.md
 
 on:
   workflow_dispatch:
-    inputs:
-      build_ios:
-        description: "Also build the iOS app (uses expensive macOS minutes)"
-        type: boolean
-        default: false
   push:
     branches: [main]
     paths:
       - "mobile/**"
       - ".github/workflows/mobile-build.yml"
-    tags: ["mobile-v*"]
-  pull_request:
-    paths:
-      - "mobile/**"
 
 concurrency:
-  group: mobile-build-${{ github.ref }}
+  group: mobile-apk-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -37,54 +32,54 @@ env:
   WEBSITE_URL: ${{ vars.TVV_WEBSITE_URL || 'https://tufanganj-vivekanand-vidyalaya.vercel.app' }}
 
 jobs:
-  checks:
-    name: Analyse + test
+  apk:
+    name: Build APK
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - run: flutter --version
-      - run: flutter pub get
-      # Real errors fail the build; style-only hints do not.
-      - run: flutter analyze --no-fatal-infos --no-fatal-warnings
-      - name: Unit + widget tests
-        run: flutter test
-        continue-on-error: true # shown as a warning; flip to false once you have seen them pass
-
-  android:
-    name: Android APK + AAB
-    needs: checks
-    runs-on: ubuntu-latest
+    timeout-minutes: 40
     permissions:
-      contents: write # only used to attach the APK to a GitHub Release on tags
+      contents: write # lets the job publish the APK on the "mobile-latest" release
     defaults:
       run:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
-      - name: Generate android/ and ios/ project files
+      # Keeps the SAME test-signing key between builds, so a new APK installs over the old one without uninstalling.
+      # (GitHub drops a cache that is unused for 7 days; if that happens, uninstall the old app once, then install.)
+      - name: Remember the test-signing key
+        uses: actions/cache@v4
+        with:
+          path: ~/.android/debug.keystore
+          key: tvv-apk-debug-keystore-v1
+
+      - name: Generate the android project files
         run: python3 tool/prepare_platforms.py --app-id "$APP_ID" --app-name "$APP_NAME"
+
       - run: flutter pub get
+
       - name: App icons from the school seal
         run: dart run flutter_launcher_icons
 
+      # Informational only: these never stop the APK from being built (a real compile error would stop the build anyway).
+      - name: Analyse (informational)
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+        continue-on-error: true
+      - name: Tests (informational)
+        run: flutter test
+        continue-on-error: true
+
+      # Optional: sign with your own key when these four secrets exist (see docs/MOBILE_SETUP.md). Otherwise a test key is used.
       - name: Release signing (only if the keystore secrets exist)
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -100,9 +95,9 @@ jobs:
               echo "keyAlias=$KEY_ALIAS"
               echo "storeFile=upload-keystore.jks"
             } > android/key.properties
-            echo "Signing with your upload key."
+            echo "Signing with your own key."
           else
-            echo "::warning title=Test signing::No keystore secrets found. The APK is signed with a debug key (fine for testing). The AAB is NOT acceptable to Google Play until you add the ANDROID_* secrets (see docs/MOBILE_SETUP.md)."
+            echo "No keystore secrets: the APK is signed with the test key (perfect for installing on your own phone)."
           fi
 
       - name: Work out version
@@ -117,116 +112,33 @@ jobs:
           flutter build apk --release \
             --build-name="${{ steps.ver.outputs.name }}" --build-number="${{ steps.ver.outputs.number }}" \
             --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=WEBSITE_URL="$WEBSITE_URL"
-      - name: Build AAB (Google Play)
-        run: |
-          flutter build appbundle --release \
-            --build-name="${{ steps.ver.outputs.name }}" --build-number="${{ steps.ver.outputs.number }}" \
-            --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=WEBSITE_URL="$WEBSITE_URL"
 
-      - name: Name the files
+      - name: Name the file
         run: |
           mkdir -p dist
-          V="${{ steps.ver.outputs.name }}+${{ steps.ver.outputs.number }}"
-          cp build/app/outputs/flutter-apk/app-release.apk "dist/TVV-School-$V.apk"
-          cp build/app/outputs/bundle/release/app-release.aab "dist/TVV-School-$V.aab"
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/TVV-School.apk"
           ls -la dist
 
       - uses: actions/upload-artifact@v4
         with:
-          name: android-release
-          path: mobile/dist/*
+          name: android-apk
+          path: mobile/dist/TVV-School.apk
           retention-days: 30
 
-      - name: Attach to GitHub Release (tags only)
-        if: startsWith(github.ref, 'refs/tags/mobile-v')
+      # A permanent, phone-friendly download page: Releases -> mobile-latest. Each build replaces the file.
+      - name: Publish on the "mobile-latest" release
         uses: softprops/action-gh-release@v2
         with:
-          files: mobile/dist/*.apk
-          generate_release_notes: true
+          tag_name: mobile-latest
+          name: "TVV School app - latest build"
+          prerelease: true
+          make_latest: "false"
+          body: |
+            Latest Android build of the TVV School app.
 
-  ios:
-    name: iOS build
-    needs: checks
-    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.build_ios) || startsWith(github.ref, 'refs/tags/mobile-v') }}
-    runs-on: macos-15
-    defaults:
-      run:
-        working-directory: mobile
-    env:
-      ASC_KEY_ID: ${{ secrets.APPSTORE_KEY_ID }}
-      ASC_ISSUER_ID: ${{ secrets.APPSTORE_ISSUER_ID }}
-      ASC_KEY_P8: ${{ secrets.APPSTORE_KEY_P8 }}
-      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with:
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          channel: stable
-          cache: true
-      - name: Generate android/ and ios/ project files
-        run: python3 tool/prepare_platforms.py --app-id "$APP_ID" --app-name "$APP_NAME"
-      - run: flutter pub get
-      - name: App icons from the school seal
-        run: dart run flutter_launcher_icons
+            **Version:** ${{ steps.ver.outputs.name }} (build ${{ steps.ver.outputs.number }})
+            **Commit:** ${{ github.sha }}
 
-      - name: Work out version
-        id: ver
-        run: |
-          NAME=$(grep -E '^version:' pubspec.yaml | sed -E 's/version:[[:space:]]*//; s/\+.*//')
-          echo "name=$NAME" >> "$GITHUB_OUTPUT"
-          echo "number=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
-
-      # Always: proves the iOS app compiles. (Unsigned, so it cannot be installed on a phone.)
-      - name: Build iOS (compile check, no signing)
-        run: |
-          flutter build ios --release --no-codesign \
-            --build-name="${{ steps.ver.outputs.name }}" --build-number="${{ steps.ver.outputs.number }}" \
-            --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=WEBSITE_URL="$WEBSITE_URL"
-
-      # Only when the four Apple secrets exist: signed IPA through Apple's cloud signing (App Store Connect API key).
-      - name: Archive + export signed IPA
-        if: ${{ env.ASC_KEY_ID != '' && env.ASC_ISSUER_ID != '' && env.ASC_KEY_P8 != '' && env.APPLE_TEAM_ID != '' }}
-        run: |
-          KEY_PATH="$HOME/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8"
-          mkdir -p "$(dirname "$KEY_PATH")"
-          printf '%s\n' "$ASC_KEY_P8" > "$KEY_PATH"
-          cd ios
-          cat > ExportOptions.plist <<PLIST
-          <?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0">
-          <dict>
-            <key>method</key><string>app-store-connect</string>
-            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
-            <key>signingStyle</key><string>automatic</string>
-            <key>uploadSymbols</key><true/>
-          </dict>
-          </plist>
-          PLIST
-          AUTH=(-allowProvisioningUpdates -authenticationKeyPath "$KEY_PATH" -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID")
-          xcodebuild -workspace Runner.xcworkspace -scheme Runner -configuration Release \
-            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
-            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic "${AUTH[@]}" archive
-          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Runner.xcarchive" \
-            -exportPath "$RUNNER_TEMP/export" -exportOptionsPlist ExportOptions.plist "${AUTH[@]}"
-          mkdir -p ../dist
-          cp "$RUNNER_TEMP"/export/*.ipa "../dist/TVV-School-${{ steps.ver.outputs.name }}+${{ steps.ver.outputs.number }}.ipa"
-
-      - name: Upload to TestFlight
-        if: ${{ env.ASC_KEY_ID != '' && env.ASC_ISSUER_ID != '' && env.ASC_KEY_P8 != '' && env.APPLE_TEAM_ID != '' }}
-        run: |
-          xcrun altool --upload-app -f dist/*.ipa -t ios --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
-
-      - name: Warn when iOS is unsigned
-        if: ${{ env.ASC_KEY_ID == '' || env.ASC_ISSUER_ID == '' || env.ASC_KEY_P8 == '' || env.APPLE_TEAM_ID == '' }}
-        run: echo "::warning title=iOS not signed::The iOS app compiled, but no Apple secrets were found so no IPA was made. Add APPSTORE_KEY_ID, APPSTORE_ISSUER_ID, APPSTORE_KEY_P8 and APPLE_TEAM_ID (see docs/MOBILE_SETUP.md)."
-
-      - uses: actions/upload-artifact@v4
-        if: ${{ always() }}
-        with:
-          name: ios-build
-          path: |
-            mobile/dist/*.ipa
-          if-no-files-found: ignore
-          retention-days: 30
+            Tap **TVV-School.apk** below on your phone to download, then open it to install.
+            If Android says it cannot be installed over the old one, uninstall the old app first (you only lose the saved sign-in).
+          files: mobile/dist/TVV-School.apk
