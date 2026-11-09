@@ -5,10 +5,12 @@ import '../../../data/attendance_stats.dart';
 import '../../../data/models/academics.dart';
 import '../../../data/models/admin.dart';
 import '../../../state/app_scope.dart';
+import '../home/dashboard_parts.dart' show StatTile, TileGrid;
 import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
 import '../../widgets/dirty_guard.dart';
+import '../../widgets/hero.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
 import '../../../core/clock.dart';
@@ -21,7 +23,7 @@ class _HistoryData {
   final AcademicSession? session;
 }
 
-/// A student's (or teacher's) own attendance: percentage of the session, month calendar and recent days.
+/// A student's (or teacher's) own attendance: summary, smart tip, streaks, month chart, calendar and a month-by-month list.
 class AttendanceHistoryView extends StatelessWidget {
   const AttendanceHistoryView({super.key, this.teacher = false});
   final bool teacher;
@@ -37,73 +39,172 @@ class AttendanceHistoryView extends StatelessWidget {
         final current = sessions.where((s) => s.isCurrent).firstOrNull;
         return _HistoryData(records, current);
       },
-      builder: (ctx, data, reload) {
-        final c = AppColors.of(ctx);
-        final s = AttendanceSummary.of(data.records, workingDays: data.session?.workingDays, minPercent: data.session?.minPercent ?? 75);
-        final byDay = {for (final r in data.records) dayOnly(r.date): r.status};
-        final recent = [...data.records]..sort((a, b) => b.date.compareTo(a.date));
-        return PageList(children: [
-          NeuCard(
-            depth: 3,
-            padding: const EdgeInsets.all(20),
-            child: Row(children: [
-              ProgressRing(
-                  percent: s.ringPercent,
-                  label: s.ringLabel,
-                  sub: data.session?.workingDays != null ? 'of session' : 'present',
-                  tone: s.tone,
-                  size: 118),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(s.countLabel, style: c.display.copyWith(fontSize: 24)),
-                  Text(
-                      data.session?.workingDays != null
-                          ? 'days present out of ${data.session!.workingDays} working days'
-                          : 'days present out of days marked',
-                      style: c.small),
-                  const SizedBox(height: 10),
-                  if (s.percentOfMarked != null) Pill('${pct(s.percentOfMarked, 0)} of days held so far', tone: s.tone),
-                  const SizedBox(height: 6),
-                  Text('Minimum needed: ${data.session?.minPercent ?? 75}%', style: c.small),
-                ]),
-              ),
+      builder: (ctx, data, reload) => _AttendanceBody(data: data),
+    );
+  }
+}
+
+class _AttendanceBody extends StatefulWidget {
+  const _AttendanceBody({required this.data});
+  final _HistoryData data;
+
+  @override
+  State<_AttendanceBody> createState() => _AttendanceBodyState();
+}
+
+class _AttendanceBodyState extends State<_AttendanceBody> {
+  bool _all = false;
+
+  Widget _tip(AppColors c, AttendanceInsights ins, AttendanceSummary s, int minP) {
+    if (ins.marked == 0) {
+      return const InsightCard(icon: Icons.hourglass_empty_rounded, title: 'Nothing marked yet', text: 'Your attendance will appear here once it is recorded.');
+    }
+    final spare = ins.spareAbsences;
+    if (spare != null) {
+      if (spare >= 0) {
+        return InsightCard(
+          icon: Icons.lightbulb_outline_rounded,
+          tone: spare <= 3 ? 'warn' : 'good',
+          title: spare == 0 ? 'No days to spare' : 'You can miss up to ${plural(spare, 'more day')}',
+          text: spare == 0
+              ? 'Attend every remaining day to finish the session at $minP% or above.'
+              : 'and still finish the session at $minP% or above (${ins.remaining} working days left).',
+        );
+      }
+      return InsightCard(
+        icon: Icons.warning_amber_rounded,
+        tone: 'bad',
+        title: 'Below the minimum of $minP%',
+        text: 'Even with full attendance from now on you could reach ${pct(ins.bestPossiblePercent, 1)}. Please speak to your class teacher.',
+      );
+    }
+    final need = ins.presentDaysNeeded;
+    if (need == 0) {
+      return InsightCard(icon: Icons.verified_outlined, tone: 'good', title: 'You are on track', text: '${pct(s.percentOfMarked, 0)} of the days held so far \u2014 above the minimum of $minP%.');
+    }
+    if (need < 0) {
+      return const InsightCard(icon: Icons.warning_amber_rounded, tone: 'bad', title: 'Below the minimum', text: 'Please speak to your class teacher.');
+    }
+    return InsightCard(
+      icon: Icons.flag_outlined,
+      tone: 'warn',
+      title: 'Attend ${plural(need, 'day')} in a row',
+      text: 'to bring your attendance up to the minimum of $minP% of the days held so far.',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final data = widget.data;
+    final minP = data.session?.minPercent ?? 75;
+    final s = AttendanceSummary.of(data.records, workingDays: data.session?.workingDays, minPercent: minP);
+    final ins = AttendanceInsights(data.records, workingDays: data.session?.workingDays, minPercent: minP);
+    final byDay = {for (final r in data.records) dayOnly(r.date): r.status};
+    final recent = [...data.records]..sort((a, b) => b.date.compareTo(a.date));
+    final shown = _all ? recent : recent.take(14).toList();
+    final months = ins.monthly(schoolNow(), months: 6);
+
+    // group the shown days by month (newest first)
+    final groups = <String, List<AttendanceRecord>>{};
+    for (final r in shown) {
+      groups.putIfAbsent('${r.date.year}-${r.date.month}', () => []).add(r);
+    }
+
+    final statusTone = s.tone;
+    final statusText = ins.marked == 0
+        ? 'Waiting for the first mark'
+        : (statusTone == 'good' ? 'On track' : (statusTone == 'warn' ? 'Needs attention' : 'Below the minimum'));
+
+    return PageList(children: [
+      HeroCard(
+        child: Row(children: [
+          HeroRing(percent: s.ringPercent, label: s.ringLabel, sub: data.session?.workingDays != null ? 'of session' : 'present', size: 118),
+          const SizedBox(width: 18),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(s.countLabel, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w800, height: 1.1)),
+              Text(data.session?.workingDays != null ? 'days present of ${data.session!.workingDays} working days' : 'days present of days marked',
+                  style: const TextStyle(fontSize: 12.5, color: Color(0xCCFFFFFF))),
+              const SizedBox(height: 10),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                HeroChip(statusText, icon: statusTone == 'good' ? Icons.check_circle_outline_rounded : Icons.info_outline_rounded),
+                if (s.percentOfMarked != null) HeroChip('${pct(s.percentOfMarked, 0)} so far'),
+              ]),
             ]),
           ),
-          const SizedBox(height: 14),
-          Row(children: [
-            Expanded(child: _Stat(label: 'Present', value: '${s.present}', tone: 'good')),
-            const SizedBox(width: 12),
-            Expanded(child: _Stat(label: 'Absent', value: '${s.absent}', tone: 'bad')),
-            const SizedBox(width: 12),
-            Expanded(child: _Stat(label: 'Marked', value: '${s.marked}', tone: 'accent')),
-          ]),
-          const SizedBox(height: 14),
-          _MonthCalendar(byDay: byDay),
-          if (recent.isNotEmpty) ...[
-            const SectionTitle('Recent days'),
-            for (final r in recent.take(14))
-              Padding(
-                padding: const EdgeInsets.only(bottom: 10),
-                child: NeuCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  radius: 16,
-                  child: Row(children: [
-                    Expanded(child: Text(fmtDate(r.date), style: c.bodyStrong)),
-                    Text(weekdayNames[r.date.weekday - 1], style: c.small),
-                    const SizedBox(width: 12),
-                    Pill(r.status.label, tone: r.status == AttendanceStatus.present ? 'good' : 'bad'),
-                  ]),
-                ),
+        ]),
+      ),
+      const SizedBox(height: 14),
+      _tip(c, ins, s, minP),
+      const SizedBox(height: 14),
+      TileGrid(tiles: [
+        StatTile(icon: Icons.check_circle_outline_rounded, label: 'Present days', value: '${s.present}', tone: 'good'),
+        StatTile(icon: Icons.cancel_outlined, label: 'Absent days', value: '${s.absent}', tone: 'bad'),
+        StatTile(icon: Icons.local_fire_department_outlined, label: 'Current streak', value: '${ins.currentStreak}', tone: 'warn'),
+        StatTile(icon: Icons.emoji_events_outlined, label: 'Best streak', value: '${ins.bestStreak}', tone: 'accent'),
+      ]),
+      if (months.any((m) => m.marked > 0)) ...[
+        const SectionTitle('Last 6 months'),
+        NeuCard(
+          padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
+          child: MiniBars(
+            values: [for (final m in months) m.percent],
+            labels: [for (final m in months) monthName(m.month).substring(0, 3)],
+            toneOf: (p) => p >= minP ? 'good' : (p >= minP - 15 ? 'warn' : 'bad'),
+          ),
+        ),
+      ],
+      const SizedBox(height: 14),
+      _MonthCalendar(byDay: byDay),
+      if (recent.isNotEmpty) ...[
+        const SectionTitle('Day by day'),
+        for (final entry in groups.entries) ...[
+          Padding(
+            padding: const EdgeInsets.fromLTRB(4, 10, 0, 8),
+            child: Text('${monthName(entry.value.first.date.month)} ${entry.value.first.date.year}', style: c.small.copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.3)),
+          ),
+          for (final r in entry.value)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: NeuCard(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+                radius: 14,
+                child: Row(children: [
+                  Container(
+                    width: 4,
+                    height: 34,
+                    decoration: BoxDecoration(color: r.status == AttendanceStatus.present ? c.good : c.bad, borderRadius: BorderRadius.circular(4)),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 40,
+                    child: Column(children: [
+                      Text('${r.date.day}', style: c.h2.copyWith(height: 1.1)),
+                      Text(weekdayShort[r.date.weekday - 1], style: c.small.copyWith(fontSize: 11)),
+                    ]),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(child: Text(weekdayNames[r.date.weekday - 1], style: c.body)),
+                  Pill(r.status.label, tone: r.status == AttendanceStatus.present ? 'good' : 'bad', icon: r.status == AttendanceStatus.present ? Icons.check_rounded : Icons.close_rounded),
+                ]),
               ),
-          ] else
-            const EmptyState(
-                icon: Icons.fact_check_outlined,
-                title: 'No attendance marked yet',
-                message: 'Your attendance will appear here once it is recorded.'),
-        ]);
-      },
-    );
+            ),
+        ],
+        if (recent.length > 14)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: NeuButton(
+              label: _all ? 'Show fewer days' : 'Show all ${recent.length} days',
+              secondary: true,
+              compact: true,
+              onPressed: () => setState(() => _all = !_all),
+            ),
+          ),
+      ] else
+        const EmptyState(
+            icon: Icons.fact_check_outlined, title: 'No attendance marked yet', message: 'Your attendance will appear here once it is recorded.'),
+    ]);
   }
 }
 

@@ -3,11 +3,14 @@ import 'package:flutter/material.dart';
 import '../../../core/api_exception.dart';
 import '../../../data/attendance_stats.dart';
 import '../../../data/models/academics.dart';
+import '../../../data/results_stats.dart';
 import '../../../state/app_scope.dart';
 import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
 import '../../widgets/dirty_guard.dart';
+import '../../widgets/hero.dart';
+import '../../widgets/insta.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
 
@@ -18,7 +21,7 @@ class _ResultsData {
   final Map<String, String> sessions;
 }
 
-/// A student's examination results, grouped by session and term, with totals.
+/// A student's examination results: an overall summary, a trend across terms and one expandable card per term.
 class ResultsView extends StatelessWidget {
   const ResultsView({super.key});
 
@@ -33,50 +36,182 @@ class ResultsView extends StatelessWidget {
       },
       builder: (ctx, d, reload) {
         final c = AppColors.of(ctx);
-        return PageList(children: [
-          if (d.groups.isEmpty)
-            const EmptyState(
+        if (d.groups.isEmpty) {
+          return const PageList(children: [
+            EmptyState(
                 icon: Icons.emoji_events_outlined,
                 title: 'No results yet',
                 message: 'Your marks will appear here once your teachers publish them.'),
-          for (final g in d.groups)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: NeuCard(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${d.sessions[g.sessionId] ?? 'Session'} \u00b7 ${g.termLabel}'.toUpperCase(), style: c.eyebrow),
-                  const SizedBox(height: 12),
-                  for (final r in g.rows)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Column(children: [
-                        Row(children: [
-                          Expanded(child: Text(d.subjects[r.subjectId] ?? 'Subject', style: c.bodyStrong)),
-                          Text('${marks(r.marks)} / ${marks(r.fullMarks)}', style: c.bodyStrong),
-                        ]),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                              value: (r.percent / 100).clamp(0, 1).toDouble(),
-                              minHeight: 7,
-                              backgroundColor: c.inset,
-                              color: r.percent >= 60 ? c.good : (r.percent >= 40 ? c.warn : c.bad)),
-                        ),
-                      ]),
-                    ),
-                  Divider(color: c.edge),
-                  Row(children: [
-                    Expanded(child: Text('Total', style: c.h2)),
-                    Text('${marks(g.total)} / ${marks(g.fullTotal)}', style: c.h2),
-                    const SizedBox(width: 10),
-                    Pill(pct(g.percent, 1), tone: g.percent >= 60 ? 'good' : (g.percent >= 40 ? 'warn' : 'bad')),
+          ]);
+        }
+        final ov = ResultsOverview(d.groups);
+        String subjectName(String id) => d.subjects[id] ?? 'Subject';
+        final best = ov.best, weakest = ov.weakest;
+        return PageList(children: [
+          HeroCard(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                HeroRing(percent: ov.overallPercent, label: pct(ov.overallPercent, 1), sub: 'overall', size: 112),
+                const SizedBox(width: 18),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    const Text('Overall result', style: TextStyle(fontSize: 13, color: Color(0xCCFFFFFF))),
+                    Text('${marks(ov.totalMarks)} / ${marks(ov.fullMarks)}', style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w800, height: 1.15)),
+                    const SizedBox(height: 6),
+                    Text('${plural(ov.chronological.length, 'term')} \u00b7 ${plural(ov.subjects.length, 'subject')}',
+                        style: const TextStyle(fontSize: 13, color: Color(0xCCFFFFFF))),
                   ]),
+                ),
+              ]),
+              if (best != null && weakest != null) ...[
+                const SizedBox(height: 16),
+                Wrap(spacing: 8, runSpacing: 8, children: [
+                  HeroChip('Best: ${subjectName(best.subjectId)} ${pct(best.percent, 0)}', icon: Icons.trending_up_rounded),
+                  HeroChip('Needs focus: ${subjectName(weakest.subjectId)} ${pct(weakest.percent, 0)}', icon: Icons.flag_outlined),
                 ]),
+              ],
+            ]),
+          ),
+          if (ov.chronological.length >= 2) ...[
+            const SectionTitle('Progress across terms'),
+            NeuCard(
+              padding: const EdgeInsets.fromLTRB(8, 16, 8, 12),
+              child: MiniBars(
+                values: [for (final g in ov.chronological.reversed.take(6).toList().reversed) g.percent],
+                labels: [for (final g in ov.chronological.reversed.take(6).toList().reversed) _termShort(g, d.sessions)],
+                toneOf: performanceTone,
               ),
             ),
+          ],
+          const SectionTitle('Term by term'),
+          for (var i = 0; i < d.groups.length; i++)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _TermCard(
+                key: ValueKey('${d.groups[i].sessionId}|${d.groups[i].term}'),
+                group: d.groups[i],
+                overview: ov,
+                chronIndex: ov.chronological.indexOf(d.groups[i]),
+                sessionLabel: d.sessions[d.groups[i].sessionId] ?? 'Session',
+                subjectName: subjectName,
+                initiallyOpen: i == 0,
+              ),
+            ),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('Green: 60% or more \u00b7 Amber: 40\u201359% \u00b7 Red: below 40%', textAlign: TextAlign.center, style: c.small.copyWith(fontSize: 11.5)),
+          ),
         ]);
       },
+    );
+  }
+}
+
+String _termShort(ResultGroup g, Map<String, String> sessions) {
+  final t = g.term == 'ANNUAL' ? 'Annual' : g.term.replaceFirst('SEM', 'Sem ');
+  final label = sessions[g.sessionId] ?? '';
+  final m = RegExp(r'^(\d{4})\D+(\d{4})$').firstMatch(label);
+  final y = m == null ? label : '${m.group(1)!.substring(2)}-${m.group(2)!.substring(2)}';
+  return y.isEmpty ? t : '$t\n$y';
+}
+
+class _TermCard extends StatefulWidget {
+  const _TermCard(
+      {super.key,
+      required this.group,
+      required this.overview,
+      required this.chronIndex,
+      required this.sessionLabel,
+      required this.subjectName,
+      required this.initiallyOpen});
+  final ResultGroup group;
+  final ResultsOverview overview;
+  final int chronIndex;
+  final String sessionLabel;
+  final String Function(String) subjectName;
+  final bool initiallyOpen;
+
+  @override
+  State<_TermCard> createState() => _TermCardState();
+}
+
+class _TermCardState extends State<_TermCard> {
+  late bool _open = widget.initiallyOpen;
+
+  Widget _delta(AppColors c, double? d) {
+    if (d == null || d.abs() < 0.05) return const SizedBox.shrink();
+    final up = d > 0;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(up ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded, color: up ? c.good : c.bad, size: 22),
+      Text(d.abs().toStringAsFixed(1), style: TextStyle(color: up ? c.good : c.bad, fontSize: 12, fontWeight: FontWeight.w800)),
+    ]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = AppColors.of(context);
+    final g = widget.group;
+    final tone = performanceTone(g.percent);
+    final termDelta = widget.chronIndex < 0 ? null : widget.overview.termDelta(widget.chronIndex);
+    return NeuCard(
+      padding: EdgeInsets.zero,
+      child: Column(children: [
+        InkWell(
+          onTap: () => setState(() => _open = !_open),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(children: [
+              ProgressRing(percent: g.percent, label: '${g.percent.round()}%', tone: tone, size: 58),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(g.termLabel, style: c.h2),
+                  Text(widget.sessionLabel, style: c.small),
+                  const SizedBox(height: 2),
+                  Text('${marks(g.total)} / ${marks(g.fullTotal)} \u00b7 ${plural(g.rows.length, 'subject')}', style: c.small.copyWith(color: c.text, fontSize: 12.5)),
+                ]),
+              ),
+              _delta(c, termDelta),
+              AnimatedRotation(turns: _open ? 0.5 : 0, duration: const Duration(milliseconds: 200), child: Icon(Icons.keyboard_arrow_down_rounded, color: c.muted)),
+            ]),
+          ),
+        ),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          alignment: Alignment.topCenter,
+          child: _open
+              ? Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Column(children: [
+                    const Hairline(),
+                    const SizedBox(height: 14),
+                    for (final r in g.rows)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 14),
+                        child: Column(children: [
+                          Row(children: [
+                            Expanded(child: Text(widget.subjectName(r.subjectId), maxLines: 1, overflow: TextOverflow.ellipsis, style: c.bodyStrong)),
+                            if (widget.chronIndex >= 0) _delta(c, widget.overview.subjectDelta(widget.chronIndex, r.subjectId)),
+                            Text('${marks(r.marks)} / ${marks(r.fullMarks)}', style: c.bodyStrong),
+                          ]),
+                          const SizedBox(height: 6),
+                          TweenAnimationBuilder<double>(
+                            tween: Tween<double>(begin: 0, end: (r.percent / 100).clamp(0, 1).toDouble()),
+                            duration: const Duration(milliseconds: 600),
+                            curve: Curves.easeOutCubic,
+                            builder: (_, v, __) => ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: LinearProgressIndicator(value: v, minHeight: 8, backgroundColor: c.inset, color: c.tone(performanceTone(r.percent))),
+                            ),
+                          ),
+                        ]),
+                      ),
+                  ]),
+                )
+              : const SizedBox(width: double.infinity),
+        ),
+      ]),
     );
   }
 }
