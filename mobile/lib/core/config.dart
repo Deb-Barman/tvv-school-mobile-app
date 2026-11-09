@@ -24,5 +24,12 @@ class AppConfig {
   static const String motto = 'Knowledge \u00b7 Character \u00b7 Progress';
   static const int establishedYear = 1964;
 
-  static const String appVersion = '1.2.0';
+  static const String appVersion = '1.3.0';
+
+  /// Filled in by the cloud build (see .github/workflows/mobile-build.yml); empty / 0 when running locally.
+  static const String updateRepo = String.fromEnvironment('UPDATE_REPO');
+  static const int appBuild = int.fromEnvironment('APP_BUILD', defaultValue: 0);
+
+  /// Public page of the latest build (shared from Settings -> "Share this app").
+  static const String downloadUrl = String.fromEnvironment('APP_DOWNLOAD_URL');
 }
