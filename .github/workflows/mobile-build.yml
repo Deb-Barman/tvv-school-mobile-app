@@ -6,21 +6,15 @@ name: Mobile app - test, then build Android APK
 #   * Manually: Actions tab -> "Mobile app - test, then build Android APK" -> Run workflow.
 #     (Emergency only: tick "Skip tests" to build the APK even if a test is failing.)
 #
-# SHARE LINK (same link forever, always the newest build):
-#   https://github.com/<owner>/<repo>/releases/download/mobile-latest/TVV-School.apk   (direct APK download)
-#   https://github.com/<owner>/<repo>/releases/tag/mobile-latest                       (page with button + QR code)
-# The finished run's Summary page prints both links and a QR code. Anyone can open them WITHOUT a GitHub account
-# only if the repo (or the public release repo, see docs/MOBILE_SETUP.md section 4b) is public.
+# WHERE TO DOWNLOAD (on your phone):
+#   1. Releases page of this repo -> the release called "mobile-latest" -> tap TVV-School.apk   (easiest)
+#   2. or the finished run's page -> Artifacts -> android-apk (a zip that contains the APK)
 #
 # Setup + install help: docs/MOBILE_SETUP.md
 
 on:
   workflow_dispatch:
     inputs:
-      release_notes:
-        description: "What is new in this build (shown on the download page)"
-        type: string
-        default: ""
       skip_tests:
         description: "Emergency only: build the APK without running the tests"
         type: boolean
@@ -43,11 +37,6 @@ env:
   APP_NAME: ${{ vars.TVV_APP_NAME || 'TVV School' }}
   API_BASE_URL: ${{ vars.TVV_API_BASE_URL || 'https://tufanganj-vivekanand-vidyalaya.onrender.com/api' }}
   WEBSITE_URL: ${{ vars.TVV_WEBSITE_URL || 'https://tufanganj-vivekanand-vidyalaya.vercel.app' }}
-  # Where the finished APK is published. Default: this repository. To keep the code private but the download public,
-  # set the variable TVV_RELEASE_REPO (a PUBLIC repo, "owner/name") and the secret TVV_RELEASE_TOKEN (see docs).
-  RELEASE_REPO: ${{ vars.TVV_RELEASE_REPO || github.repository }}
-  DOWNLOAD_PAGE: https://github.com/${{ vars.TVV_RELEASE_REPO || github.repository }}/releases/tag/mobile-latest
-  DOWNLOAD_APK: https://github.com/${{ vars.TVV_RELEASE_REPO || github.repository }}/releases/download/mobile-latest/TVV-School.apk
 
 jobs:
   test:
@@ -105,8 +94,6 @@ jobs:
     needs: test
     # Runs after the tests passed - or when the tests were skipped on purpose (never after a failed test).
     if: ${{ !failure() && !cancelled() }}
-    env:
-      RELEASE_TOKEN: ${{ secrets.TVV_RELEASE_TOKEN }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     permissions:
@@ -176,19 +163,12 @@ jobs:
         run: |
           flutter build apk --release \
             --build-name="${{ steps.ver.outputs.name }}" --build-number="${{ steps.ver.outputs.number }}" \
-            --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=WEBSITE_URL="$WEBSITE_URL" \
-            --dart-define=UPDATE_REPO="$RELEASE_REPO" --dart-define=APP_BUILD="${{ steps.ver.outputs.number }}" \
-            --dart-define=APP_DOWNLOAD_URL="$DOWNLOAD_PAGE"
+            --dart-define=API_BASE_URL="$API_BASE_URL" --dart-define=WEBSITE_URL="$WEBSITE_URL"
 
-      - name: Name the file + checksum
-        id: pkg
+      - name: Name the file
         run: |
           mkdir -p dist
           cp build/app/outputs/flutter-apk/app-release.apk "dist/TVV-School.apk"
-          SIZE=$(du -h dist/TVV-School.apk | cut -f1)
-          SHA=$(sha256sum dist/TVV-School.apk | cut -d' ' -f1)
-          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           ls -la dist
 
       - uses: actions/upload-artifact@v4
@@ -197,84 +177,20 @@ jobs:
           path: mobile/dist/TVV-School.apk
           retention-days: 30
 
-      - name: Write the release page text
-        env:
-          NOTES_INPUT: ${{ github.event.inputs.release_notes }}
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
-        run: |
-          NOTES="${NOTES_INPUT:-$COMMIT_MSG}"
-          [ -z "$NOTES" ] && NOTES="Latest build."
-          QR="https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${DOWNLOAD_APK}"
-          {
-            echo "## TVV School app"
-            echo
-            echo "**Download for Android:** [TVV-School.apk](${DOWNLOAD_APK})"
-            echo
-            echo "[![Scan to download](${QR})](${DOWNLOAD_APK})"
-            echo
-            echo "Scan the code with a phone camera, or tap the link, then open the downloaded file to install."
-            echo "If Android asks, allow *Install unknown apps* for your browser (one time). If it says the app cannot be installed over the old one, uninstall the old app first."
-            echo
-            echo "| | |"
-            echo "|---|---|"
-            echo "| Version | ${{ steps.ver.outputs.name }} (build ${{ steps.ver.outputs.number }}) |"
-            echo "| Size | ${{ steps.pkg.outputs.size }} |"
-            echo "| SHA-256 | \`${{ steps.pkg.outputs.sha }}\` |"
-            echo "| Built from | ${{ github.sha }} |"
-            echo
-            echo "### What is new"
-            echo "$NOTES"
-            echo
-            echo "<!-- tvv-build:${{ steps.ver.outputs.number }} tvv-version:${{ steps.ver.outputs.name }} -->"
-          } > release-body.md
-          cat release-body.md
-
-      # Publish where this workflow runs (default).
-      - name: Publish the download page (this repository)
-        if: ${{ vars.TVV_RELEASE_REPO == '' }}
+      # A permanent, phone-friendly download page: Releases -> mobile-latest. Each build replaces the file.
+      - name: Publish on the "mobile-latest" release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: mobile-latest
           name: "TVV School app - latest build"
-          prerelease: false
-          make_latest: "true"
-          body_path: mobile/release-body.md
+          prerelease: true
+          make_latest: "false"
+          body: |
+            Latest Android build of the TVV School app.
+
+            **Version:** ${{ steps.ver.outputs.name }} (build ${{ steps.ver.outputs.number }})
+            **Commit:** ${{ github.sha }}
+
+            Tap **TVV-School.apk** below on your phone to download, then open it to install.
+            If Android says it cannot be installed over the old one, uninstall the old app first (you only lose the saved sign-in).
           files: mobile/dist/TVV-School.apk
-
-      # Publish to a separate PUBLIC repository (keeps the source code private, the download public).
-      - name: Publish the download page (public release repository)
-        if: ${{ vars.TVV_RELEASE_REPO != '' && env.RELEASE_TOKEN != '' }}
-        uses: softprops/action-gh-release@v2
-        with:
-          repository: ${{ vars.TVV_RELEASE_REPO }}
-          token: ${{ secrets.TVV_RELEASE_TOKEN }}
-          tag_name: mobile-latest
-          name: "TVV School app - latest build"
-          prerelease: false
-          make_latest: "true"
-          body_path: mobile/release-body.md
-          files: mobile/dist/TVV-School.apk
-
-      - name: Explain a missing token
-        if: ${{ vars.TVV_RELEASE_REPO != '' && env.RELEASE_TOKEN == '' }}
-        run: |
-          echo "::error::TVV_RELEASE_REPO is set but the secret TVV_RELEASE_TOKEN is missing. See docs/MOBILE_SETUP.md section 4b."
-          exit 1
-
-      - name: Show the share link on the run page
-        shell: bash
-        run: |
-          {
-            echo "## Your app is ready"
-            echo
-            echo "**Share this link (always the newest build):**"
-            echo
-            echo "- Download page: ${DOWNLOAD_PAGE}"
-            echo "- Direct APK: ${DOWNLOAD_APK}"
-            echo
-            echo "![QR code](https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=10&data=${DOWNLOAD_APK})"
-            echo
-            echo "Version ${{ steps.ver.outputs.name }} (build ${{ steps.ver.outputs.number }}) - ${{ steps.pkg.outputs.size }}"
-            echo
-            echo "_Anyone can open the link without an account only if the repository holding the release is public._"
-          } >> "$GITHUB_STEP_SUMMARY"
