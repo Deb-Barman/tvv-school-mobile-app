@@ -21,15 +21,23 @@ The website and backend are untouched.
    (it also runs by itself every time you push a change inside `mobile/` to `main`).
    The run has two jobs: **1 - Analyse + test** (code check + every unit/widget test) and **2 - Build APK**.
    The APK is built **only if the tests pass**. If a test fails, open job 1 -> *Unit + widget tests*, copy the red lines
-   and send them to me. (Emergency only: when starting the run by hand you can tick **Skip tests**.)
-2. When the run turns green, download the app **on your phone**:
-   * **Easiest:** repo -> **Releases** (right side of the repo page) -> **"TVV School app - latest build"** -> tap **TVV-School.apk**.
-   * Or: open the run -> **Artifacts** -> **android-apk** (a zip containing the APK).
+   and send them to me. (Emergency only: when starting the run by hand you can tick **Skip tests**. You can also type *What is new* - it appears on the download page.)
+2. When the run turns green, open the run page -> **Summary**. It shows your **share link and a QR code**:
+   * **Download page** (always the newest build): `https://github.com/<owner>/<repo>/releases/tag/mobile-latest`
+   * **Direct APK link**: `https://github.com/<owner>/<repo>/releases/download/mobile-latest/TVV-School.apk`
+   Open either on your phone and tap **TVV-School.apk**. Send the same link (or let someone scan the QR code) to anyone -
+   students, teachers, parents. The link never changes; it always gives the latest build.
+   *(Anyone can open it without a GitHub account only if the repository that holds the release is **public** - see 4b.)*
 3. Open the downloaded APK. Android asks to allow "install unknown apps" for your browser / file manager - allow it once.
 4. Open **TVV School** and sign in. (Super Admin: **long-press the school seal** on the sign-in screen.)
 
 The first request after the server has been idle can take up to a minute (Render's free server is asleep). The app wakes it
 while you type, shows placeholders while loading and retries by itself.
+
+### Updates reach people by themselves
+
+The app checks the download page once each time it opens. When a newer build exists, a banner says **"Version x.y.z is ready - Update"**
+(Settings also has **Check for updates** and **Share this app**, which copies the link). Nothing is installed without the person tapping.
 
 ### Installing a newer build over an older one
 
@@ -72,9 +80,23 @@ base64 -w0 upload-keystore.jks > upload-keystore.b64
 
 Run the workflow again. From now on every build is signed with your key and always installs over the previous one.
 
+## 4b. Keep the source code private but the download public (recommended for sharing)
+
+A private repository's download link only works for people who have access to it. To let everybody download:
+
+1. Create a **second, public** repository, e.g. `tvv-school-app-downloads`. Tick **Add a README file** (the repo needs one commit).
+2. GitHub -> your profile photo -> **Settings -> Developer settings -> Personal access tokens -> Fine-grained tokens -> Generate new token**.
+   *Repository access:* **Only select repositories** -> the downloads repo. *Permissions -> Repository permissions -> Contents:* **Read and write**. Copy the token.
+3. In your **source** repo -> Settings -> Secrets and variables -> Actions:
+   * **Secrets** -> New: `TVV_RELEASE_TOKEN` = the token.
+   * **Variables** -> New: `TVV_RELEASE_REPO` = `your-user/tvv-school-app-downloads`.
+4. Run the workflow again. Your share link is now
+   `https://github.com/your-user/tvv-school-app-downloads/releases/download/mobile-latest/TVV-School.apk`
+   (printed on the run's Summary page). The code stays private.
+
 ## 5. Releasing a new version
 
-Change `version: 1.2.0+1` in `mobile/pubspec.yaml` (the part before `+` is what people see; the build number is replaced
+Change `version: 1.3.0+1` in `mobile/pubspec.yaml` (the part before `+` is what people see; the build number is replaced
 automatically by the workflow run number). Push to `main`.
 
 ## 6. Troubleshooting
