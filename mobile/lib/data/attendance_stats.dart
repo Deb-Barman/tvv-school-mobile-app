@@ -92,3 +92,115 @@ class ResultGroup {
     return out;
   }
 }
+
+/// One calendar month of someone's attendance.
+class MonthStat {
+  const MonthStat({required this.year, required this.month, required this.present, required this.absent});
+  final int year;
+  final int month;
+  final int present;
+  final int absent;
+
+  int get marked => present + absent;
+  double? get percent => marked == 0 ? null : present / marked * 100;
+}
+
+/// Useful numbers worked out from the real attendance rows (nothing is invented):
+/// streaks, a month-by-month chart and "how many more days can I miss?".
+class AttendanceInsights {
+  AttendanceInsights(Iterable<AttendanceRecord> records, {this.workingDays, this.minPercent = 75})
+      : _sorted = ([...records]..sort((a, b) => a.date.compareTo(b.date)));
+
+  final int? workingDays;
+  final int minPercent;
+  final List<AttendanceRecord> _sorted;
+
+  int get present => _sorted.where((r) => r.status == AttendanceStatus.present).length;
+  int get absent => _sorted.length - present;
+  int get marked => _sorted.length;
+
+  /// Days of the session that have not been marked yet (needs the session's working days).
+  int? get remaining {
+    final w = workingDays;
+    if (w == null || w <= 0) return null;
+    final left = w - marked;
+    return left < 0 ? 0 : left;
+  }
+
+  /// Present days needed by the end of the session to reach the minimum percentage.
+  int? get requiredPresent {
+    final w = workingDays;
+    if (w == null || w <= 0) return null;
+    return (minPercent * w + 99) ~/ 100;
+  }
+
+  /// How many more days can be missed and still finish at or above the minimum.
+  /// Negative = even perfect attendance from now on is not enough. null = the session's working days are unknown.
+  int? get spareAbsences {
+    final need = requiredPresent;
+    final left = remaining;
+    if (need == null || left == null) return null;
+    return present + left - need;
+  }
+
+  /// The best percentage still possible by the end of the session (attending every remaining day).
+  double? get bestPossiblePercent {
+    final w = workingDays;
+    final left = remaining;
+    if (w == null || w <= 0 || left == null) return null;
+    return ((present + left) / w * 100).clamp(0, 100).toDouble();
+  }
+
+  /// Without session totals: how many present days in a row bring "present / marked" up to the minimum. 0 = already there.
+  /// -1 = impossible (the minimum is 100% and an absence is on record).
+  int get presentDaysNeeded {
+    if (marked == 0) return 0;
+    if (present * 100 >= minPercent * marked) return 0;
+    if (minPercent >= 100) return -1;
+    final num = minPercent * marked - 100 * present;
+    final den = 100 - minPercent;
+    return (num + den - 1) ~/ den;
+  }
+
+  int get currentStreak {
+    var n = 0;
+    for (var i = _sorted.length - 1; i >= 0; i--) {
+      if (_sorted[i].status != AttendanceStatus.present) break;
+      n++;
+    }
+    return n;
+  }
+
+  int get bestStreak {
+    var best = 0, run = 0;
+    for (final r in _sorted) {
+      if (r.status == AttendanceStatus.present) {
+        run++;
+        if (run > best) best = run;
+      } else {
+        run = 0;
+      }
+    }
+    return best;
+  }
+
+  /// The last [months] calendar months up to and including [now]'s month, oldest first (months without data are kept).
+  List<MonthStat> monthly(DateTime now, {int months = 6}) {
+    final out = <MonthStat>[];
+    for (var i = months - 1; i >= 0; i--) {
+      final m = DateTime(now.year, now.month - i);
+      var p = 0, a = 0;
+      for (final r in _sorted) {
+        if (r.date.year == m.year && r.date.month == m.month) {
+          if (r.status == AttendanceStatus.present) {
+            p++;
+          } else {
+            a++;
+          }
+        }
+      }
+      out.add(MonthStat(year: m.year, month: m.month, present: p, absent: a));
+    }
+    return out;
+  }
+}

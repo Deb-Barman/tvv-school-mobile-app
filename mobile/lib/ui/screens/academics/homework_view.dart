@@ -6,6 +6,7 @@ import '../../../state/app_scope.dart';
 import '../../format.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
+import '../../widgets/hero.dart';
 import '../../widgets/neu.dart';
 import '../../widgets/states.dart';
 import '../../../core/clock.dart';
@@ -114,7 +115,27 @@ class _StudentHomeworkState extends State<_StudentHomework> {
       );
     }
 
+    final doneCount = open.where((h) => h.done == true).length;
+    final left = open.where((h) => h.done != true).toList()..sort((a, b) => (a.dueDate ?? DateTime(2100)).compareTo(b.dueDate ?? DateTime(2100)));
     return PageList(children: [
+      if (open.isNotEmpty)
+        HeroCard(
+          child: Row(children: [
+            HeroRing(percent: open.isEmpty ? 0 : doneCount / open.length * 100, label: '$doneCount/${open.length}', sub: 'done', size: 96),
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(left.isEmpty ? 'All caught up!' : '${plural(left.length, 'task')} to do', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                if (left.isNotEmpty)
+                  Text('Next due: ${left.first.title} \u00b7 ${relativeDay(left.first.dueDate).toLowerCase()}',
+                      maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 13, color: Color(0xCCFFFFFF)))
+                else
+                  const Text('Every open homework is ticked. Great work!', style: TextStyle(fontSize: 13, color: Color(0xCCFFFFFF))),
+              ]),
+            ),
+          ]),
+        ),
       if (_items.isEmpty) const EmptyState(icon: Icons.task_alt_rounded, title: 'No homework', message: 'You\u2019re all caught up.'),
       if (open.isNotEmpty) ...[SectionTitle('To do (${open.where((h) => h.done != true).length} left)'), for (final h in open) card(h)],
       if (upcoming.isNotEmpty) ...[const SectionTitle('Coming up'), for (final h in upcoming) card(h)],
@@ -222,7 +243,11 @@ class _StaffHomeworkState extends State<_StaffHomework> {
                     child: LinearProgressIndicator(
                         value: h.classSize == 0 ? 0 : h.submitted! / h.classSize!, minHeight: 8, backgroundColor: c.inset, color: c.good)),
                 const SizedBox(height: 6),
-                Text('${h.submitted} of ${h.classSize} students done \u00b7 tap to see who', style: c.small),
+                Text(
+                    h.classSize == 0
+                        ? '${h.submitted} ticked \u00b7 no students are enrolled in this class'
+                        : '${h.submitted} of ${h.classSize} students done \u00b7 tap to see who',
+                    style: c.small),
               ],
             ]),
           ),
@@ -248,7 +273,25 @@ class _CompletionsSheet extends StatelessWidget {
           builder: (ctx, snap) {
             if (snap.connectionState != ConnectionState.done)
               return const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()));
-            if (snap.hasError) return Text(errorText(snap.error!), style: TextStyle(color: c.bad));
+            if (snap.hasError) {
+              final e = snap.error;
+              if (e is ApiException && e.kind == ApiErrorKind.notFound) {
+                return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Icon(Icons.groups_outlined, color: c.muted),
+                    const SizedBox(width: 10),
+                    Expanded(child: Text('No student list available', style: c.bodyStrong)),
+                  ]),
+                  const SizedBox(height: 6),
+                  Text(
+                      homework.submitted != null && homework.classSize != null
+                          ? '${homework.submitted} of ${homework.classSize} students have ticked this homework. The school server has no enrolled students for this class, so there is nobody to list. Add students to the class (Super Admin \u2192 Accounts) and the list will appear.'
+                          : 'The school server has no student list for this homework \u2014 usually because the class has no enrolled students yet.',
+                      style: c.small),
+                ]);
+              }
+              return Text(errorText(e!), style: TextStyle(color: c.bad));
+            }
             final rows = snap.data ?? [];
             if (rows.isEmpty) return Text('No students in this class yet.', style: c.small);
             final done = rows.where((r) => r.done).length;

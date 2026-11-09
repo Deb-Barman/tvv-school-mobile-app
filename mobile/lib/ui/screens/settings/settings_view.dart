@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/api_exception.dart';
 import '../../../core/config.dart';
 import '../../../state/app_scope.dart';
 import '../../theme/tokens.dart';
 import '../../widgets/common.dart';
+import '../../widgets/me_avatar.dart';
 import '../../widgets/neu.dart';
 
 class SettingsView extends StatelessWidget {
@@ -20,7 +22,7 @@ class SettingsView extends StatelessWidget {
       builder: (ctx, _) => ListView(padding: const EdgeInsets.fromLTRB(16, 8, 16, 40), children: [
         NeuCard(
           child: Row(children: [
-            Avatar(name: me.fullName, size: 56),
+            const MeAvatar(size: 60, ring: true),
             const SizedBox(width: 14),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -75,8 +77,33 @@ class SettingsView extends StatelessWidget {
             const SizedBox(height: 10),
             Text('${AppConfig.schoolTown} \u00b7 Est. ${AppConfig.establishedYear}', style: c.small),
             const SizedBox(height: 10),
-            InfoRow('App version', AppConfig.appVersion),
+            InfoRow('App version', AppConfig.appBuild > 0 ? '${AppConfig.appVersion} (build ${AppConfig.appBuild})' : AppConfig.appVersion),
             const SizedBox(height: 8),
+            if (AppConfig.updateRepo.isNotEmpty) ...[
+              NeuButton(
+                  label: 'Check for updates',
+                  icon: Icons.system_update_alt_rounded,
+                  secondary: true,
+                  compact: true,
+                  onPressed: () async {
+                    final svc = ctx.svc;
+                    final ran = await svc.checkForUpdate();
+                    if (!ctx.mounted) return;
+                    toast(ctx, !ran ? 'Update check is only available in the downloaded app.' : (svc.update.value == null ? 'You have the latest version.' : 'A new version is ready \u2014 see the banner on the home screen.'));
+                  }),
+              const SizedBox(height: 8),
+              NeuButton(
+                  label: 'Share this app',
+                  icon: Icons.share_rounded,
+                  secondary: true,
+                  compact: true,
+                  onPressed: () async {
+                    final link = AppConfig.downloadUrl.isNotEmpty ? AppConfig.downloadUrl : 'https://github.com/${AppConfig.updateRepo}/releases/tag/mobile-latest';
+                    await Clipboard.setData(ClipboardData(text: 'Download the TVV School app: $link'));
+                    if (ctx.mounted) toast(ctx, 'Download link copied \u2014 paste it in WhatsApp or anywhere.');
+                  }),
+              const SizedBox(height: 8),
+            ],
             NeuButton(
                 label: 'Open school website',
                 icon: Icons.language_rounded,

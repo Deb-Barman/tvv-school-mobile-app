@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../core/clock.dart';
+import '../../../data/next_period.dart';
 import '../../theme/tokens.dart';
+import '../../widgets/hero.dart';
 import '../../widgets/me_avatar.dart';
 import '../../widgets/neu.dart';
 
@@ -144,4 +148,71 @@ class QuickActionRow extends StatelessWidget {
           Expanded(child: actions[i]),
         ],
       ]);
+}
+
+/// "Next class in 25 min" / "In progress \u00b7 12 min left": updates itself every 30 seconds.
+class NextClassCard extends StatefulWidget {
+  const NextClassCard({super.key, required this.slots, this.onTap});
+  final List<PeriodSlot> slots;
+  final VoidCallback? onTap;
+
+  @override
+  State<NextClassCard> createState() => _NextClassCardState();
+}
+
+class _NextClassCardState extends State<NextClassCard> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final now = schoolNow();
+    final info = nextPeriod(widget.slots, now.hour * 60 + now.minute);
+    if (info == null) return const SizedBox.shrink();
+    final slot = info.slot;
+    final sub = [if (slot.subtitle.isNotEmpty) slot.subtitle, if (slot.room.isNotEmpty) 'Room ${slot.room}'].join(' \u00b7 ');
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: HeroCard(
+          padding: const EdgeInsets.all(16),
+          child: Row(children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(color: Color(0x29FFFFFF), shape: BoxShape.circle),
+              child: Icon(info.live ? Icons.play_circle_outline_rounded : Icons.schedule_rounded, color: Colors.white, size: 26),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(info.live ? 'IN PROGRESS' : 'NEXT CLASS', style: const TextStyle(fontSize: 11, letterSpacing: 1, color: Color(0xCCFFFFFF), fontWeight: FontWeight.w700)),
+                Text(slot.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, height: 1.2)),
+                if (sub.isNotEmpty) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12.5, color: Color(0xCCFFFFFF))),
+              ]),
+            ),
+            const SizedBox(width: 10),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(minutesLabel(info.minutes), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              Text(info.live ? 'left' : 'to go', style: const TextStyle(fontSize: 12, color: Color(0xCCFFFFFF))),
+            ]),
+          ]),
+        ),
+      ),
+    );
+  }
 }

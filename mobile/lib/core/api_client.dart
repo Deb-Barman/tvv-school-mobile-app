@@ -77,7 +77,7 @@ class ApiClient {
   static HttpClient _defaultClient() {
     final c = HttpClient();
     c.connectionTimeout = const Duration(seconds: 20);
-    c.userAgent = 'TVV-Mobile/1.2';
+    c.userAgent = 'TVV-Mobile/1.3';
     return c;
   }
 

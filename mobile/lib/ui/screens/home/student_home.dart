@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/clock.dart';
+import '../../../data/next_period.dart';
 import '../../../data/attendance_stats.dart';
 import '../../../data/models/academics.dart';
 import '../../../data/models/content.dart';
@@ -93,6 +94,14 @@ class StudentHomeView extends StatelessWidget {
             StoryBubble(icon: Icons.photo_library_outlined, label: 'Gallery', onTap: () => onOpen('gallery')),
           ]),
           GreetingHeader(name: me.firstName, chips: [if (d.classLabel != null) Pill(d.classLabel!, tone: 'good')]),
+          if (wd <= 5 && today.any((e) => !e.isBreak))
+            NextClassCard(
+              onTap: () => onOpen('timetable'),
+              slots: [
+                for (final e in today)
+                  PeriodSlot(startMin: minutesOfDay(e.startTime), endMin: minutesOfDay(e.endTime), title: e.title, room: e.room, isBreak: e.isBreak)
+              ],
+            ),
           const SizedBox(height: 8),
           PostCard(
             title: 'Attendance',

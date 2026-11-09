@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:tvv_mobile/core/clock.dart';
+import 'package:tvv_mobile/data/next_period.dart';
 import 'package:tvv_mobile/ui/screens/home/dashboard_parts.dart';
+import 'package:tvv_mobile/data/results_stats.dart' show performanceTone;
 import 'package:tvv_mobile/ui/theme/app_theme.dart';
 import 'package:tvv_mobile/ui/widgets/common.dart';
+import 'package:tvv_mobile/ui/widgets/hero.dart';
 import 'package:tvv_mobile/ui/widgets/insta.dart';
 import 'package:tvv_mobile/ui/widgets/neu.dart';
 import 'package:tvv_mobile/ui/widgets/states.dart';
@@ -28,6 +32,8 @@ Future<void> pumpOnSmallPhone(WidgetTester tester, Widget body, {Brightness brig
 void main() {
   for (final brightness in Brightness.values) {
     testWidgets('shared building blocks fit a small phone with big text (${brightness.name})', (tester) async {
+      debugSchoolClock = () => DateTime(2026, 11, 9, 10, 20);
+      addTearDown(() => debugSchoolClock = null);
       await pumpOnSmallPhone(
         tester,
         ListView(padding: const EdgeInsets.all(12), children: [
@@ -47,6 +53,37 @@ void main() {
           ]),
           SegmentStrip<int>(items: const [0, 1, 2, 3, 4, 5], selected: 2, labelOf: (d) => const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][d], onChanged: (_) {}),
           const NeuButton(label: 'Save attendance for the whole class', onPressed: null),
+          const SizedBox(height: 12),
+          HeroCard(
+            child: Row(children: [
+              const HeroRing(percent: 72, label: '72%', sub: 'of session'),
+              const SizedBox(width: 18),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Text('138 of 200', style: TextStyle(fontSize: 30, fontWeight: FontWeight.w800)),
+                  const Text('days present of 200 working days'),
+                  const SizedBox(height: 8),
+                  const Wrap(spacing: 6, runSpacing: 6, children: [HeroChip('Needs attention'), HeroChip('72% so far')]),
+                ]),
+              ),
+            ]),
+          ),
+          const SizedBox(height: 12),
+          const InsightCard(
+              icon: Icons.lightbulb_outline_rounded,
+              title: 'You can miss up to 12 more days',
+              text: 'and still finish the session at 75% or above (62 working days left).'),
+          const SizedBox(height: 12),
+          const NeuCard(
+            padding: EdgeInsets.fromLTRB(8, 16, 8, 12),
+            child: MiniBars(
+              values: [50, null, 80, 95, 30, 100],
+              labels: ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov'],
+              toneOf: performanceTone,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const NextClassCard(slots: [PeriodSlot(startMin: 600, endMin: 645, title: 'Mathematics', subtitle: 'Class XI Science', room: '12')]),
         ]),
         brightness: brightness,
       );

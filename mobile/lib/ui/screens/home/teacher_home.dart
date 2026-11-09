@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/clock.dart';
+import '../../../data/next_period.dart';
 import '../../../data/models/academics.dart';
 import '../../../data/models/content.dart';
 import '../../../state/app_scope.dart';
@@ -66,6 +67,20 @@ class TeacherHomeView extends StatelessWidget {
             Pill(wd > 5 ? 'No classes today' : plural(today.where((e) => !e.isBreak).length, 'period') + ' today', tone: 'good'),
             Pill('$open open homework', tone: 'warn'),
           ]),
+          if (wd <= 5 && today.any((e) => !e.isBreak))
+            NextClassCard(
+              onTap: () => onOpen('timetable'),
+              slots: [
+                for (final e in today)
+                  PeriodSlot(
+                      startMin: minutesOfDay(e.startTime),
+                      endMin: minutesOfDay(e.endTime),
+                      title: e.title,
+                      subtitle: labels[e.classId] ?? '',
+                      room: e.room,
+                      isBreak: e.isBreak)
+              ],
+            ),
           SectionTitle("Today's periods", trailing: TextButton(onPressed: () => onOpen('timetable'), child: const Text('Timetable'))),
           if (wd > 5)
             const NeuCard(inset: true, child: Text('It\u2019s Sunday \u2014 no classes today.'))
