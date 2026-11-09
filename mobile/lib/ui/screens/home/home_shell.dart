@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/config.dart';
+import '../../../core/update_checker.dart';
 import '../../../state/app_scope.dart';
 import '../../features.dart';
 import '../../theme/tokens.dart';
@@ -32,6 +33,7 @@ class _HomeShellState extends State<HomeShell> {
       final svc = context.svc;
       svc.myPhoto.value = null; // a different person may have been signed in before
       svc.refreshMyPhoto();
+      svc.checkForUpdate();
     }
   }
 
@@ -93,6 +95,27 @@ class _HomeShellState extends State<HomeShell> {
         body: SafeArea(
           top: false,
           child: Column(children: [
+            ValueListenableBuilder<UpdateInfo?>(
+              valueListenable: context.svc.update,
+              builder: (_, info, __) => AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                child: info == null
+                    ? const SizedBox(width: double.infinity)
+                    : Container(
+                        width: double.infinity,
+                        color: c.accentSoft,
+                        padding: const EdgeInsets.fromLTRB(16, 6, 8, 6),
+                        child: Row(children: [
+                          Icon(Icons.system_update_rounded, size: 18, color: c.accent),
+                          const SizedBox(width: 10),
+                          Expanded(
+                              child: Text(info.version.isEmpty ? 'A new version of the app is ready.' : 'Version ${info.version} is ready.',
+                                  style: TextStyle(fontSize: 13, color: c.text, fontWeight: FontWeight.w600))),
+                          TextButton(onPressed: () => openLink(context, info.downloadUrl), child: Text('Update', style: TextStyle(color: c.accent, fontWeight: FontWeight.w800))),
+                        ]),
+                      ),
+              ),
+            ),
             ValueListenableBuilder<bool>(
               valueListenable: offline,
               builder: (_, isOffline, __) => AnimatedSize(
