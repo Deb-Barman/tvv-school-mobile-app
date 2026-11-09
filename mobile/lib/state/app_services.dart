@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 
 import '../core/api_client.dart';
+import '../core/update_checker.dart';
 import '../core/config.dart';
 import '../core/response_cache.dart';
 import '../core/secure_token_store.dart';
@@ -32,6 +33,22 @@ class AppServices {
 
   /// The signed-in person's profile picture (a link), or null. Shown in the bottom bar, the menu and the dashboards.
   final ValueNotifier<String?> myPhoto = ValueNotifier<String?>(null);
+
+  /// A newer build of the app, when one is waiting (null = up to date / unknown).
+  final ValueNotifier<UpdateInfo?> update = ValueNotifier<UpdateInfo?>(null);
+
+  /// Asks GitHub for the latest build. Returns true when the check could run (the app was downloaded from a release).
+  Future<bool> checkForUpdate() async {
+    if (AppConfig.updateRepo.isEmpty || AppConfig.appBuild <= 0) return false;
+    final checker = UpdateChecker(AppConfig.updateRepo);
+    try {
+      final latest = await checker.latest();
+      update.value = (latest != null && latest.build > AppConfig.appBuild) ? latest : null;
+    } finally {
+      checker.close();
+    }
+    return true;
+  }
 
   /// Loads the signed-in person's picture. Quietly does nothing when there is none (or no profile, e.g. Super Admin).
   Future<void> refreshMyPhoto() async {
