@@ -317,10 +317,15 @@ class ChipBar<T> extends StatelessWidget {
                     child: InkWell(
                       borderRadius: BorderRadius.circular(20),
                       onTap: () => onChanged(it),
-                      child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-                          child: Text(labelOf(it),
-                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: on ? c.onAccent : c.text))),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(minHeight: 44),
+                        child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
+                            child: Center(
+                                widthFactor: 1,
+                                child: Text(labelOf(it),
+                                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5, color: on ? c.onAccent : c.text)))),
+                      ),
                     ),
                   ),
                 ),
@@ -361,6 +366,7 @@ class SegmentStrip<T> extends StatelessWidget {
                   onTap: () => onChanged(it),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 160),
+                    constraints: const BoxConstraints(minHeight: 44),
                     padding: const EdgeInsets.symmetric(vertical: 9),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(color: it == selected ? c.accent : Colors.transparent, borderRadius: BorderRadius.circular(11)),

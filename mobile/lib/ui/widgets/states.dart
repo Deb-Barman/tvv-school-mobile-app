@@ -17,7 +17,22 @@ class Pulse extends StatefulWidget {
 }
 
 class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
-  late final AnimationController _ctl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500))..repeat();
+  late final AnimationController _ctl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+  bool _reduced = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final r = MediaQuery.disableAnimationsOf(context);
+    if (r != _reduced || (!r && !_ctl.isAnimating)) {
+      _reduced = r;
+      if (r) {
+        _ctl.stop();
+      } else {
+        _ctl.repeat();
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -27,10 +42,12 @@ class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    if (_reduced) return widget.child;
     final c = AppColors.of(context);
     final base = c.isDark ? const Color(0xFF1E1E24) : const Color(0xFFEAEAEF);
     final glow = c.isDark ? const Color(0xFF34343D) : const Color(0xFFF8F8FB);
-    return AnimatedBuilder(
+    return RepaintBoundary(
+        child: AnimatedBuilder(
       animation: _ctl,
       child: widget.child,
       builder: (context, child) {
@@ -47,7 +64,7 @@ class _PulseState extends State<Pulse> with SingleTickerProviderStateMixin {
           child: child,
         );
       },
-    );
+    ));
   }
 }
 
