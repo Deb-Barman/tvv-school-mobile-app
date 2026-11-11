@@ -51,9 +51,9 @@ class AppColors {
     accent: Color(0xFF5D46B9),
     onAccent: Color(0xFFFFFFFF),
     accentSoft: Color(0xFFEFEBFF),
-    good: Color(0xFF138A5B),
-    warn: Color(0xFFC77700),
-    bad: Color(0xFFE0313F),
+    good: Color(0xFF0E7048),
+    warn: Color(0xFF9A5B00),
+    bad: Color(0xFFC62835),
   );
 
   static const dark = AppColors(
