@@ -40,7 +40,7 @@ env:
   FLUTTER_VERSION: "3.41.9"
   # Repository VARIABLES (Settings > Secrets and variables > Actions > Variables). Defaults are used when not set.
   APP_ID: ${{ vars.TVV_APP_ID || 'com.tvv.school' }}
-  APP_NAME: ${{ vars.TVV_APP_NAME || 'TVV School' }}
+  APP_NAME: ${{ vars.TVV_APP_NAME || 'Tufanganj Vivekanand Vidyalaya (H.S.)' }}
   API_BASE_URL: ${{ vars.TVV_API_BASE_URL || 'https://tufanganj-vivekanand-vidyalaya.onrender.com/api' }}
   WEBSITE_URL: ${{ vars.TVV_WEBSITE_URL || 'https://tufanganj-vivekanand-vidyalaya.vercel.app' }}
   # Where the finished APK is published. Default: this repository. To keep the code private but the download public,
