@@ -18,13 +18,13 @@ class AppConfig {
     defaultValue: 'https://tufanganj-vivekanand-vidyalaya.vercel.app',
   );
 
-  static const String schoolName = 'Tufanganj Vivekananda Vidyalaya';
-  static const String schoolNameFull = 'Tufanganj Vivekananda Vidyalaya (H.S.)';
+  static const String schoolName = 'Tufanganj Vivekanand Vidyalaya';
+  static const String schoolNameFull = 'Tufanganj Vivekanand Vidyalaya (H.S.)';
   static const String schoolTown = 'Tufanganj, Cooch Behar, West Bengal, India';
   static const String motto = 'Knowledge \u00b7 Character \u00b7 Progress';
   static const int establishedYear = 1964;
 
-  static const String appVersion = '1.3.0';
+  static const String appVersion = '1.4.0';
 
   /// Filled in by the cloud build (see .github/workflows/mobile-build.yml); empty / 0 when running locally.
   static const String updateRepo = String.fromEnvironment('UPDATE_REPO');
