@@ -29,7 +29,7 @@ The website and backend are untouched.
    students, teachers, parents. The link never changes; it always gives the latest build.
    *(Anyone can open it without a GitHub account only if the repository that holds the release is **public** - see 4b.)*
 3. Open the downloaded APK. Android asks to allow "install unknown apps" for your browser / file manager - allow it once.
-4. Open **TVV School** and sign in. (Super Admin: **long-press the school seal** on the sign-in screen.)
+4. Open the app (named **Tufanganj Vivekanand Vidyalaya (H.S.)**) and sign in. (Super Admin: **long-press the school seal** on the sign-in screen.)
 
 The first request after the server has been idle can take up to a minute (Render's free server is asleep). The app wakes it
 while you type, shows placeholders while loading and retries by itself.
@@ -54,7 +54,7 @@ GitHub -> repo -> **Settings -> Secrets and variables -> Actions -> Variables ta
 | `TVV_API_BASE_URL` | `https://tufanganj-vivekanand-vidyalaya.onrender.com/api` | The Django API address (must end with `/api`, no slash after). |
 | `TVV_WEBSITE_URL` | `https://tufanganj-vivekanand-vidyalaya.vercel.app` | "Open school website" link. |
 | `TVV_APP_ID` | `com.tvv.school` | Android package name. **Choose before you ever publish - it can never change afterwards.** Do not start it with `in.` (a Kotlin keyword). |
-| `TVV_APP_NAME` | `TVV School` | Name under the icon. |
+| `TVV_APP_NAME` | `Tufanganj Vivekanand Vidyalaya (H.S.)` | Name under the icon. Phones cut long names with "..."; set a shorter one here if you prefer (for example `TVV School`). |
 
 The app contains **no secrets**: only the public API address. Never put passwords or keys in these variables.
 
@@ -96,7 +96,7 @@ A private repository's download link only works for people who have access to it
 
 ## 5. Releasing a new version
 
-Change `version: 1.3.0+1` in `mobile/pubspec.yaml` (the part before `+` is what people see; the build number is replaced
+Change `version: 1.4.0+1` in `mobile/pubspec.yaml` (the part before `+` is what people see; the build number is replaced
 automatically by the workflow run number). Push to `main`.
 
 ## 6. Troubleshooting

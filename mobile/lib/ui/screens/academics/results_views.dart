@@ -198,7 +198,7 @@ class _TermCardState extends State<_TermCard> {
                           const SizedBox(height: 6),
                           TweenAnimationBuilder<double>(
                             tween: Tween<double>(begin: 0, end: (r.percent / 100).clamp(0, 1).toDouble()),
-                            duration: const Duration(milliseconds: 600),
+                            duration: reduceMotion(context) ? Duration.zero : const Duration(milliseconds: 600),
                             curve: Curves.easeOutCubic,
                             builder: (_, v, __) => ClipRRect(
                               borderRadius: BorderRadius.circular(8),

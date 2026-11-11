@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../theme/tokens.dart';
+import 'insta.dart';
 
 /// The big gradient card at the top of a page (same in light and dark, so white text is always readable).
 class HeroCard extends StatelessWidget {
@@ -164,7 +165,7 @@ class MiniBars extends StatelessWidget {
                   alignment: Alignment.bottomCenter,
                   child: TweenAnimationBuilder<double>(
                     tween: Tween<double>(begin: 0, end: values[i] == null ? 0 : (values[i]! / 100).clamp(0.04, 1).toDouble()),
-                    duration: const Duration(milliseconds: 650),
+                    duration: reduceMotion(context) ? Duration.zero : const Duration(milliseconds: 650),
                     curve: Curves.easeOutCubic,
                     builder: (_, v, __) => Container(
                       height: height * v,

@@ -201,7 +201,7 @@ class _PressScaleState extends State<PressScale> {
       onPointerDown: (_) => _set(true),
       onPointerUp: (_) => _set(false),
       onPointerCancel: (_) => _set(false),
-      child: AnimatedScale(scale: _down ? 0.978 : 1, duration: const Duration(milliseconds: 110), curve: Curves.easeOut, child: widget.child),
+      child: AnimatedScale(scale: _down ? 0.978 : 1, duration: motionMs(context, 110), curve: Curves.easeOut, child: widget.child),
     );
   }
 }
@@ -214,6 +214,7 @@ class FadeSlideIn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (reduceMotion(context)) return child;
     final i = index > 7 ? 7 : index;
     return TweenAnimationBuilder<double>(
       tween: Tween<double>(begin: 0, end: 1),
@@ -224,3 +225,9 @@ class FadeSlideIn extends StatelessWidget {
     );
   }
 }
+
+/// True when the person asked the phone to reduce motion (Settings -> Accessibility -> Remove animations).
+bool reduceMotion(BuildContext context) => MediaQuery.disableAnimationsOf(context);
+
+/// [ms] milliseconds, or no animation at all when reduced motion is on.
+Duration motionMs(BuildContext context, int ms) => reduceMotion(context) ? Duration.zero : Duration(milliseconds: ms);

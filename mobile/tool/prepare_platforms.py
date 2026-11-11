@@ -135,7 +135,7 @@ def patch_plist(path: Path, app_name: str) -> None:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--app-id", default="com.tvv.school", help="Android applicationId / iOS bundle id (cannot be changed after publishing)")
-    ap.add_argument("--app-name", default="TVV School", help="Name shown under the app icon")
+    ap.add_argument("--app-name", default="Tufanganj Vivekanand Vidyalaya (H.S.)", help="Name shown under the app icon")
     ap.add_argument("--scaffold-from", help="use an existing scaffold instead of running flutter create (testing)")
     args = ap.parse_args()
 

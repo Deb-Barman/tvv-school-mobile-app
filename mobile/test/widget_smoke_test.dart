@@ -16,7 +16,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sign in'), findsWidgets);
-    expect(find.text('Tufanganj Vivekananda Vidyalaya'), findsOneWidget);
+    expect(find.text('Tufanganj Vivekanand Vidyalaya (H.S.)'), findsOneWidget);
     expect(find.text('Forgot password?'), findsOneWidget);
 
     // Empty form: both fields complain and nothing is sent.

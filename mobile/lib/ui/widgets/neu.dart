@@ -101,7 +101,9 @@ class NeuButton extends StatelessWidget {
           child: InkWell(
             borderRadius: radius,
             onTap: enabled ? onPressed : null,
-            child: Padding(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 44),
+              child: Padding(
               padding: EdgeInsets.symmetric(horizontal: compact ? 14 : 20, vertical: compact ? 10 : 14),
               child: Row(
                 mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
@@ -119,6 +121,7 @@ class NeuButton extends StatelessWidget {
                 ],
               ),
             ),
+            ),
           ),
         ),
       ),
@@ -128,7 +131,7 @@ class NeuButton extends StatelessWidget {
 
 /// Round icon button.
 class NeuIconButton extends StatelessWidget {
-  const NeuIconButton({super.key, required this.icon, required this.onPressed, this.tooltip, this.size = 44, this.color});
+  const NeuIconButton({super.key, required this.icon, required this.onPressed, this.tooltip, this.size = 48, this.color});
 
   final IconData icon;
   final VoidCallback? onPressed;
