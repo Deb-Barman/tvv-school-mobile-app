@@ -58,7 +58,7 @@ class _TvvAppState extends State<TvvApp> {
       child: ListenableBuilder(
         listenable: _theme,
         builder: (context, _) => MaterialApp(
-          title: AppConfig.schoolName,
+          title: AppConfig.schoolNameFull,
           debugShowCheckedModeBanner: false,
           navigatorKey: _navKey,
           theme: buildTheme(Brightness.light),
